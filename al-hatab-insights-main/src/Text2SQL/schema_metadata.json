@@ -1,0 +1,35 @@
+{
+  "table_name": "dc_168h_forecasts",
+  "description": "Hourly demand forecasts aggregated at the distribution center (DC) level. Each row represents forecasted demand for a DC at a specific forecast horizon.",
+  "columns": {
+    "dc_id": {
+      "description": "Unique identifier of a distribution center. DC IDs encode geographic location and facility role. Location names are embedded as substrings within dc_id.",
+      "type": "string",
+      "semantic_role": "distribution_center_identifier",
+      "matching_rule": "ALWAYS use case-insensitive partial match (ILIKE '%value%')",
+      "location_encoding": "dc_id contains uppercase city or region names (e.g., DUBAI, KSA, UAE)",
+      "distinct_values": [
+        "DC_DUBAI_MAIN",
+        "DC_RIYADH_CENTRAL",
+        "DC_JEDDAH_WEST"
+      ],
+      "semantic_hints": [
+        "User-provided locations should be matched using substring",
+        "If multiple DCs match, return all relevant rows",
+        "Never use equality match for dc_id"
+      ]
+    },
+    "timestamp": {
+      "description": "Base timestamp representing when the forecast was generated.",
+      "type": "datetime"
+    },
+    "forecast_hour_offset": {
+      "description": "Hour offset from timestamp indicating how many hours ahead the demand is forecasted.",
+      "type": "integer"
+    },
+    "predicted_demand": {
+      "description": "Forecasted demand quantity for the distribution center.",
+      "type": "float"
+    }
+  }
+}

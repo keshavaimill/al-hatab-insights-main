@@ -1,0 +1,316 @@
+import { useEffect, useState } from "react";
+import { Layout } from "@/components/layout/Layout";
+import { KPICard } from "@/components/dashboard/KPICard";
+import { dcKPIs as fallbackDcKpis, inventoryAgeData, replenishmentRecs } from "@/lib/mockData";
+import { useTranslation } from "react-i18next";
+import { Warehouse, TrendingUp, Clock, AlertTriangle, Package } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
+import { fetchDcKpis, type DcKpisResponse } from "@/api/dcKpis";
+import { fetchDcDaysCover, type DcDaysCoverRow } from "@/api/dcDaysCover";
+
+const DC = () => {
+  const { t } = useTranslation();
+  const [selectedDc, setSelectedDc] = useState("DC_JEDDAH");
+  const [dcKpis, setDcKpis] = useState<DcKpisResponse | null>(null);
+  const [isKpiLoading, setIsKpiLoading] = useState(false);
+  const [daysCoverData, setDaysCoverData] = useState<DcDaysCoverRow[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadKpis = async () => {
+      setIsKpiLoading(true);
+      try {
+        const data = await fetchDcKpis(selectedDc);
+        if (!cancelled) {
+          setDcKpis(data);
+        }
+      } catch (error) {
+        console.error("Failed to load DC KPIs from backend, using fallback mock data.", error);
+        if (!cancelled) {
+          setDcKpis({
+            dcId: selectedDc,
+            serviceLevelPct: fallbackDcKpis.serviceLevel,
+            wastePercent: fallbackDcKpis.wastePercent,
+            avgShelfLifeDays: fallbackDcKpis.avgShelfLife,
+            backorders: fallbackDcKpis.backorders,
+          });
+        }
+      } finally {
+        if (!cancelled) {
+          setIsKpiLoading(false);
+        }
+      }
+    };
+
+    loadKpis();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDc]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadDaysCover = async () => {
+      try {
+        const data = await fetchDcDaysCover();
+        if (!cancelled) {
+          setDaysCoverData(data);
+        }
+      } catch (error) {
+        console.error("Failed to load DC days-of-cover data from backend.", error);
+      }
+    };
+
+    loadDaysCover();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <Layout>
+      <div className="space-y-6 animate-fade-in">
+        {/* Page Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-3">
+              <Warehouse className="w-7 h-7 text-primary" />
+              {t("pages.dc.title")}
+            </h1>
+            <p className="text-muted-foreground">{t("pages.dc.subtitle")}</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <select
+              className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm"
+              value={selectedDc}
+              onChange={(e) => setSelectedDc(e.target.value)}
+            >
+              <option value="DC_JEDDAH">{t("pages.dc.jeddahDC")}</option>
+              <option value="DC_DAMMAM">{t("pages.dc.dammamDC")}</option>
+              <option value="DC_DUBAI">Dubai DC</option>
+              <option value="DC_RIYADH">Riyadh DC</option>
+            </select>
+          </div>
+        </div>
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <KPICard
+            title={t("pages.dc.dcServiceLevel")}
+            value={dcKpis?.serviceLevelPct ?? fallbackDcKpis.serviceLevel}
+            unit="%"
+            icon={<TrendingUp className="w-5 h-5" />}
+          />
+          <KPICard
+            title={t("pages.dc.wasteRate")}
+            value={dcKpis?.wastePercent ?? fallbackDcKpis.wastePercent}
+            unit="%"
+            icon={<AlertTriangle className="w-5 h-5" />}
+          />
+          <KPICard
+            title={t("pages.dc.avgShelfLifeRemaining")}
+            value={dcKpis?.avgShelfLifeDays ?? fallbackDcKpis.avgShelfLife}
+            unit={t("pages.dc.days")}
+            icon={<Clock className="w-5 h-5" />}
+          />
+          <KPICard
+            title={t("pages.dc.backorders")}
+            value={dcKpis?.backorders ?? fallbackDcKpis.backorders}
+            unit={t("pages.dc.units")}
+            icon={<Package className="w-5 h-5" />}
+          />
+        </div>
+
+        {/* Inventory Age Pyramid */}
+        <div className="bg-card rounded-xl border border-border p-6">
+          <h3 className="font-semibold mb-6">{t("pages.dc.inventoryAgeDistribution")}</h3>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={inventoryAgeData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                <XAxis
+                  type="number"
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={{ stroke: "hsl(var(--border))" }}
+                  tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="bucket"
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={{ stroke: "hsl(var(--border))" }}
+                  width={80}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                  }}
+                  formatter={(value: number) => [`${value.toLocaleString()} ${t("pages.dc.units")}`, t("pages.dc.inventory")]}
+                />
+                <Bar dataKey="units" radius={[0, 4, 4, 0]}>
+                  {inventoryAgeData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          
+          {/* Summary */}
+          <div className="mt-6 pt-4 border-t border-border grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p className="text-sm text-muted-foreground">Fresh Stock (0-3 days)</p>
+              <p className="text-xl font-semibold text-success">20,700 units</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">At Risk (4-5 days)</p>
+              <p className="text-xl font-semibold text-warning">4,500 units</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Near Expiry (6+ days)</p>
+              <p className="text-xl font-semibold text-destructive">2,250 units</p>
+            </div>
+          </div>
+        </div>
+
+        {/* DC × SKU Days of Cover Heatmap */}
+        <div className="bg-card rounded-xl border border-border p-6">
+          <h3 className="font-semibold mb-4">Days of Cover by DC & SKU</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr>
+                  <th className="text-left py-3 px-4 text-muted-foreground font-medium">DC</th>
+                  <th className="text-center py-3 px-4 text-muted-foreground font-medium">SKU-001<br/><span className="text-xs">(Target: 4d)</span></th>
+                  <th className="text-center py-3 px-4 text-muted-foreground font-medium">SKU-002<br/><span className="text-xs">(Target: 4d)</span></th>
+                  <th className="text-center py-3 px-4 text-muted-foreground font-medium">SKU-003<br/><span className="text-xs">(Target: 5d)</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {["DC_JEDDAH", "DC_DAMMAM", "DC_DUBAI", "DC_RIYADH"].map((dcId) => {
+                  const label =
+                    dcId === "DC_JEDDAH"
+                      ? "Jeddah DC"
+                      : dcId === "DC_DAMMAM"
+                        ? "Dammam DC"
+                        : dcId === "DC_DUBAI"
+                          ? "Dubai DC"
+                          : "Riyadh DC";
+
+                  const skuTargets: { skuId: string; target: number }[] = [
+                    { skuId: "SKU_101", target: 4 },
+                    { skuId: "SKU_102", target: 4 },
+                    { skuId: "SKU_103", target: 5 },
+                  ];
+
+                  return (
+                    <tr key={dcId} className="border-t border-border">
+                      <td className="py-3 px-4 font-medium">{label}</td>
+                      {skuTargets.map(({ skuId, target }) => {
+                        const row = daysCoverData.find(
+                          (r) => r.dcId === dcId && r.skuId === skuId,
+                        );
+                        const cover = row?.daysCover ?? null;
+
+                        if (cover == null) {
+                          return (
+                            <td key={skuId} className="py-3 px-4 text-center text-muted-foreground">
+                              —
+                            </td>
+                          );
+                        }
+
+                        const ratio = cover / target;
+                        const bgColor =
+                          ratio < 0.7
+                            ? "bg-destructive/30"
+                            : ratio < 0.9
+                              ? "bg-warning/30"
+                              : ratio > 1.2
+                                ? "bg-warning/30"
+                                : "bg-success/30";
+                        const textColor =
+                          ratio < 0.7
+                            ? "text-destructive"
+                            : ratio < 0.9
+                              ? "text-warning"
+                              : ratio > 1.2
+                                ? "text-warning"
+                                : "text-success";
+
+                        return (
+                          <td key={skuId} className="py-3 px-4 text-center">
+                            <span
+                              className={`inline-block px-3 py-1 rounded-lg ${bgColor} ${textColor} font-medium`}
+                            >
+                              {cover.toFixed(1)}d
+                            </span>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Replenishment Recommendations */}
+        <div className="bg-card rounded-xl border border-border overflow-hidden">
+          <div className="p-4 border-b border-border">
+            <h3 className="font-semibold">AI Replenishment Recommendations</h3>
+            <p className="text-sm text-muted-foreground">Suggested dispatches to stores</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Store</th>
+                  <th>SKU</th>
+                  <th>Current On-Hand</th>
+                  <th>Recommended Qty</th>
+                  <th>Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                {replenishmentRecs.map((rec, index) => (
+                  <tr key={index}>
+                    <td className="font-medium">{rec.store}</td>
+                    <td className="font-mono text-sm">{rec.sku}</td>
+                    <td>{rec.onHand} units</td>
+                    <td>
+                      <span className={rec.recommended > rec.onHand ? "text-success" : "text-warning"}>
+                        {rec.recommended > rec.onHand ? "+" : ""}{rec.recommended - rec.onHand} → {rec.recommended} units
+                      </span>
+                    </td>
+                    <td className="text-muted-foreground text-sm">{rec.reason}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </Layout>
+  );
+};
+
+export default DC;

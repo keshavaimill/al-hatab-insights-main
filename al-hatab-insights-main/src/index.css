@@ -1,0 +1,426 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 98%;
+    --foreground: 0 0% 8%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 8%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 8%;
+
+    /* Primary: Steel Blue (#1F77B4) */
+    --primary: 207 70% 42%;
+    --primary-foreground: 0 0% 98%;
+
+    /* Secondary: Light Steel Blue tint */
+    --secondary: 207 30% 95%;
+    --secondary-foreground: 207 70% 42%;
+
+    /* Muted: Gray (#7F7F7F) */
+    --muted: 0 0% 50%;
+    --muted-foreground: 0 0% 35%;
+
+    /* Accent: Cyan Blue (#17BECF) */
+    --accent: 185 78% 48%;
+    --accent-foreground: 0 0% 98%;
+
+    /* Destructive: Crimson Red (#D62728) */
+    --destructive: 359 70% 50%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* Success: Medium Green (#2CA02C) */
+    --success: 120 61% 39%;
+    --success-foreground: 0 0% 98%;
+
+    /* Warning: Orange (#FF7F0E) */
+    --warning: 25 100% 53%;
+    --warning-foreground: 0 0% 98%;
+
+    --border: 207 20% 85%;
+    --input: 207 20% 90%;
+    --ring: 207 70% 42%;
+
+    --radius: 0.75rem;
+
+    /* Chart colors from palette */
+    --chart-1: 207 70% 42%; /* Steel Blue */
+    --chart-2: 25 100% 53%; /* Orange */
+    --chart-3: 120 61% 39%; /* Medium Green */
+    --chart-4: 268 45% 57%; /* Amethyst Purple */
+    --chart-5: 185 78% 48%; /* Cyan Blue */
+
+    /* Chart color palette - hex values for direct use */
+    --color-steel-blue: #1F77B4;
+    --color-orange: #FF7F0E;
+    --color-medium-green: #2CA02C;
+    --color-crimson-red: #D62728;
+    --color-amethyst-purple: #9467BD;
+    --color-saddle-brown: #8C564B;
+    --color-orchid-pink: #E377C2;
+    --color-gray: #7F7F7F;
+    --color-cyan-blue: #17BECF;
+
+    /* Sidebar: White theme */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 8%;
+    --sidebar-primary: 207 70% 42%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 207 30% 95%;
+    --sidebar-accent-foreground: 207 70% 42%;
+    --sidebar-border: 207 20% 88%;
+    --sidebar-ring: 207 70% 42%;
+
+    /* Custom gradients using palette colors */
+    --gradient-primary: linear-gradient(135deg, #1F77B4 0%, #17BECF 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(207 20% 98%) 100%);
+    --gradient-success: linear-gradient(135deg, #2CA02C 0%, #17BECF 100%);
+    --gradient-warning: linear-gradient(135deg, #FF7F0E 0%, #E377C2 100%);
+    --gradient-danger: linear-gradient(135deg, #D62728 0%, #8C564B 100%);
+
+    --shadow-glow: 0 0 40px hsl(207 70% 42% / 0.1);
+    --shadow-card: 0 4px 24px hsl(207 70% 42% / 0.08);
+
+    /* Status colors from palette */
+    --status-good: 120 61% 39%; /* Medium Green */
+    --status-warning: 25 100% 53%; /* Orange */
+    --status-danger: 359 70% 50%; /* Crimson Red */
+  }
+
+  .dark {
+    --background: 0 0% 98%;
+    --foreground: 0 0% 8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    @apply font-semibold tracking-tight;
+  }
+
+  .font-mono {
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* RTL Support - Only set direction attribute, no visual changes */
+  [dir="rtl"] {
+    direction: rtl;
+  }
+
+  [dir="ltr"] {
+    direction: ltr;
+  }
+}
+
+@layer components {
+  .kpi-card {
+    @apply relative overflow-hidden rounded-xl bg-card border border-border/50 p-5;
+    background: var(--gradient-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  .kpi-card::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: var(--gradient-primary);
+  }
+
+  .kpi-card:hover::before {
+    @apply opacity-5;
+  }
+
+  .status-dot {
+    @apply w-2.5 h-2.5 rounded-full;
+  }
+
+  .status-good {
+    @apply bg-success;
+  }
+
+  .status-warning {
+    @apply bg-warning;
+  }
+
+  .status-danger {
+    @apply bg-destructive;
+  }
+
+  .status-muted {
+    @apply bg-muted;
+  }
+
+  .status-dot.status-good {
+    background-color: hsl(var(--success));
+    box-shadow: 0 0 8px hsl(var(--success) / 0.5);
+  }
+
+  .status-dot.status-warning {
+    background-color: hsl(var(--warning));
+    box-shadow: 0 0 8px hsl(var(--warning) / 0.5);
+  }
+
+  .status-dot.status-danger {
+    background-color: hsl(var(--destructive));
+    box-shadow: 0 0 8px hsl(var(--destructive) / 0.5);
+  }
+
+  .data-table {
+    @apply w-full text-sm;
+  }
+
+  .data-table th {
+    @apply text-left text-muted-foreground font-medium py-3 px-4 border-b border-border/50;
+  }
+
+  .data-table td {
+    @apply py-3 px-4 border-b border-border/30;
+  }
+
+  .data-table tbody tr {
+    @apply transition-colors hover:bg-secondary/50 cursor-pointer;
+  }
+
+  .nav-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200;
+    color: hsl(var(--sidebar-foreground));
+    opacity: 0.85;
+  }
+
+  .nav-item:hover {
+    background-color: hsl(var(--sidebar-accent));
+    color: hsl(var(--sidebar-foreground));
+    opacity: 1;
+  }
+
+  .nav-item.active {
+    background-color: hsl(var(--sidebar-accent));
+    color: hsl(var(--sidebar-primary));
+    opacity: 1;
+    border-left: 3px solid hsl(var(--sidebar-primary));
+  }
+
+  .filter-button {
+    @apply px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200;
+    @apply bg-secondary text-muted-foreground hover:bg-secondary/80 hover:text-foreground;
+  }
+
+  .filter-button.active {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .map-pin {
+    @apply absolute w-4 h-4 rounded-full transform -translate-x-1/2 -translate-y-1/2 cursor-pointer;
+    @apply transition-transform duration-200 hover:scale-150;
+  }
+
+  .map-pin::after {
+    content: '';
+    @apply absolute inset-0 rounded-full animate-ping opacity-30;
+    background: inherit;
+  }
+
+  .funnel-step {
+    @apply relative flex items-center justify-center py-6 px-4;
+    clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%, 20px 50%);
+  }
+
+  .funnel-step:first-child {
+    clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%);
+  }
+
+  .sparkline-container {
+    @apply h-8 w-20;
+  }
+
+  /* Leaflet map customizations */
+  .leaflet-container {
+    @apply bg-background;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    border-radius: 0.75rem;
+    overflow: hidden;
+  }
+
+  .leaflet-popup-content-wrapper {
+    @apply bg-card border border-border rounded-lg shadow-lg;
+  }
+
+  .leaflet-popup-content {
+    @apply m-0;
+  }
+
+  .leaflet-popup-tip {
+    @apply bg-card border-l border-b border-border;
+  }
+
+  .leaflet-control-zoom {
+    @apply border-border rounded-lg overflow-hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .leaflet-control-zoom a {
+    @apply bg-card text-foreground border-border;
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+  }
+
+  .leaflet-control-zoom a:hover {
+    @apply bg-secondary;
+  }
+
+  .leaflet-control-zoom-in,
+  .leaflet-control-zoom-out {
+    font-size: 18px;
+    font-weight: bold;
+  }
+
+  .custom-status-marker {
+    background: transparent !important;
+    border: none !important;
+  }
+
+  /* Ensure map fits within container */
+  .leaflet-container.leaflet-touch {
+    border-radius: 0.75rem;
+  }
+
+  /* Floating Bot Button Enhancements */
+  .floating-bot-button {
+    @apply fixed bottom-6 right-6 rounded-2xl shadow-2xl transition-all duration-300 z-40;
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+    box-shadow: 0 8px 32px hsl(var(--primary) / 0.3);
+  }
+
+  .floating-bot-button:hover {
+    box-shadow: 0 12px 48px hsl(var(--primary) / 0.4);
+    transform: translateY(-2px);
+  }
+
+  /* Chat Window Enhancements */
+  .chat-window {
+    @apply rounded-xl border-2 border-primary/20 shadow-2xl backdrop-blur-sm;
+    background: hsl(var(--card));
+    box-shadow: 0 20px 60px hsl(var(--primary) / 0.15);
+  }
+
+  /* Message Bubbles */
+  .message-bubble-user {
+    @apply rounded-lg p-3;
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+    box-shadow: 0 4px 12px hsl(var(--primary) / 0.2);
+  }
+
+  .message-bubble-assistant {
+    @apply rounded-lg p-3 bg-secondary;
+    box-shadow: 0 2px 8px hsl(var(--foreground) / 0.05);
+  }
+
+  /* Top Bar Enhancements */
+  .top-bar {
+    @apply border-b border-border backdrop-blur-sm;
+    background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.95) 100%);
+    box-shadow: 0 1px 3px hsl(var(--foreground) / 0.05);
+  }
+
+  /* Ripple Effects for Floating Bot */
+  .ripple-1,
+  .ripple-2,
+  .ripple-3 {
+    width: 56px;
+    height: 56px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    animation: ripple 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  .ripple-1 {
+    animation-delay: 0s;
+  }
+
+  .ripple-2 {
+    animation-delay: 1s;
+  }
+
+  .ripple-3 {
+    animation-delay: 2s;
+  }
+
+  @keyframes ripple {
+    0% {
+      width: 56px;
+      height: 56px;
+      opacity: 0.6;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    50% {
+      opacity: 0.3;
+    }
+    100% {
+      width: 120px;
+      height: 120px;
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(2.14);
+    }
+  }
+
+  /* Smooth image rendering for floating bot */
+  .floating-bot-button img,
+  button img {
+    image-rendering: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-primary);
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out forwards;
+  }
+
+  .animate-pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 20px hsl(0 0% 98% / 0.1); }
+    50% { box-shadow: 0 0 40px hsl(0 0% 98% / 0.2); }
+  }
+}
