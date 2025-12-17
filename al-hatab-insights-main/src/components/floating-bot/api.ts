@@ -2,7 +2,7 @@
 // Uses explicit backend URL, overridable via VITE_TEXT2SQL_API_URL
 export const API_BASE_URL =
   import.meta.env.VITE_TEXT2SQL_API_URL ||
-  (import.meta.env.DEV ? "http://localhost:5000" : "https://al-hatab.onrender.com");
+  (import.meta.env.DEV ? "http://localhost:5000" : "https://al-hatab-insights-main.onrender.com");
 
 export interface QueryResponse {
   sql: string;

@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     proxy: {
       "/api/text2sql": {
-        target: "http://localhost:5000",
+        target: mode === "development" ? "http://localhost:5000" : "https://al-hatab-insights-main.onrender.com",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/text2sql/, ""),
       },
