@@ -20,8 +20,24 @@ from utils.intent import wants_chart
 
 
 app = Flask(__name__)
-# Enable CORS for frontend requests - allow all origins in development
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+# Enable CORS for frontend requests - allow all origins
+# This allows requests from localhost (dev) and any deployed frontend
+CORS(app, 
+     resources={r"/*": {
+         "origins": "*",
+         "methods": ["GET", "POST", "OPTIONS"],
+         "allow_headers": ["Content-Type", "Authorization"],
+         "expose_headers": ["Content-Type"]
+     }}, 
+     supports_credentials=True)
+
+# Add CORS headers to all responses
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response
 
 # Get the directory where app.py is located
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -75,33 +91,91 @@ summarizer = SummarizerAgent()
 # ---------------------------------------------
 # Text2SQL query endpoint
 # ---------------------------------------------
-@app.route("/query", methods=["POST"])
+@app.route("/query", methods=["POST", "OPTIONS"])
 def query():
-    body = request.json
-    question = body.get("question", "")
+    # Handle OPTIONS request for CORS preflight
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
+    
+    try:
+        # Validate request body
+        if not request.json:
+            return jsonify({"error": "Request body is required"}), 400
+        
+        body = request.json
+        question = body.get("question", "").strip()
+        
+        if not question:
+            return jsonify({"error": "Question is required"}), 400
 
-    # Step 1 — Get SQL from text2sql agent
-    sql = t2s.run(question)
+        # Step 1 — Get SQL from text2sql agent
+        try:
+            sql = t2s.run(question)
+        except Exception as e:
+            print(f"Error in Text2SQL agent: {str(e)}")
+            return jsonify({
+                "error": "Failed to generate SQL query",
+                "details": str(e),
+                "sql": None,
+                "data": [],
+                "summary": "I encountered an error while processing your query. Please try rephrasing it.",
+                "viz": None,
+                "mime": None
+            }), 500
 
-    # Step 2 — Execute SQL
-    df = execute_sql(db_path, sql)
+        # Step 2 — Execute SQL
+        try:
+            df = execute_sql(db_path, sql)
+        except Exception as e:
+            print(f"Error executing SQL: {str(e)}")
+            return jsonify({
+                "error": "Failed to execute SQL query",
+                "details": str(e),
+                "sql": sql,
+                "data": [],
+                "summary": "I generated a SQL query but encountered an error executing it. Please try rephrasing your question.",
+                "viz": None,
+                "mime": None
+            }), 500
 
-    # Step 3 — Summarize result
-    summary = summarizer.summarize(question, df)
+        # Step 3 — Summarize result
+        try:
+            summary = summarizer.summarize(question, df)
+        except Exception as e:
+            print(f"Error summarizing results: {str(e)}")
+            # Use a fallback summary if summarization fails
+            summary = f"Query returned {len(df)} row(s)."
 
-    # Step 4 — Generate visualization ONLY if explicitly asked
-    if wants_chart(question) and not df.empty:
-        viz, mime = summarizer.generate_viz(question, df)
-    else:
+        # Step 4 — Generate visualization ONLY if explicitly asked
         viz, mime = None, None
+        try:
+            if wants_chart(question) and not df.empty:
+                viz, mime = summarizer.generate_viz(question, df)
+        except Exception as e:
+            print(f"Error generating visualization: {str(e)}")
+            # Continue without visualization if it fails
 
-    return jsonify({
-        "sql": sql,
-        "data": df.to_dict(orient="records"),
-        "summary": summary,
-        "viz": viz,
-        "mime": mime
-    })
+        return jsonify({
+            "sql": sql,
+            "data": df.to_dict(orient="records"),
+            "summary": summary,
+            "viz": viz,
+            "mime": mime
+        })
+    
+    except Exception as e:
+        print(f"Unexpected error in /query endpoint: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "error": "Internal server error",
+            "details": str(e),
+            "sql": None,
+            "data": [],
+            "summary": "I encountered an unexpected error. Please try again.",
+            "viz": None,
+            "mime": None
+        }), 500
 
 
 # ---------------------------------------------
@@ -198,6 +272,19 @@ def global_kpis():
     """
     results = GlobalCommandCenterService.get_global_kpis()
     return jsonify(results)
+
+
+# ---------------------------------------------
+# Health check endpoint
+# ---------------------------------------------
+@app.route("/health", methods=["GET", "OPTIONS"])
+def health():
+    """Health check endpoint to verify backend is running"""
+    return jsonify({
+        "status": "healthy",
+        "service": "al-hatab-insights-backend",
+        "version": "1.0.0"
+    }), 200
 
 
 if __name__ == "__main__":

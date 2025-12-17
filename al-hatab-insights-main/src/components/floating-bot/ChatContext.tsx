@@ -51,7 +51,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: response.summary,
+        content: response.summary || "I couldn't generate a response. Please try again.",
         sql: response.sql,
         data: response.data,
         viz: response.viz,
@@ -64,7 +64,9 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: t("chat.error"),
+        content: error instanceof Error 
+          ? `Error: ${error.message}` 
+          : t("chat.error"),
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
