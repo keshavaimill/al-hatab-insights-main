@@ -3,6 +3,13 @@ from flask_cors import CORS
 import json
 import os
 
+# Load environment variables from .env file FIRST (before any other imports that might need them)
+from dotenv import load_dotenv
+load_dotenv()
+
+# Import config to ensure .env is loaded and validate API keys
+from config import config
+
 # Original imports 
 from core.db_builder import load_schema, build_database, execute_sql
 from core.schema_loader import SchemaLoader
@@ -102,6 +109,18 @@ summarizer = None
 agent_error = None
 
 try:
+    # Verify API key is loaded before initializing agents
+    if config.LLM_PROVIDER == "google":
+        if not config.GOOGLE_API_KEY:
+            raise ValueError("GOOGLE_API_KEY is required but not set. Please check your .env file.")
+        print(f"✅ Using Google Gemini API (model: {config.GOOGLE_MODEL})")
+        print(f"✅ API Key loaded: {'*' * (len(config.GOOGLE_API_KEY) - 8) + config.GOOGLE_API_KEY[-8:] if config.GOOGLE_API_KEY else 'NOT SET'}")
+    elif config.LLM_PROVIDER == "openai":
+        if not config.OPENAI_API_KEY:
+            raise ValueError("OPENAI_API_KEY is required but not set. Please check your .env file.")
+        print(f"✅ Using OpenAI API (model: {config.OPENAI_MODEL})")
+        print(f"✅ API Key loaded: {'*' * (len(config.OPENAI_API_KEY) - 8) + config.OPENAI_API_KEY[-8:] if config.OPENAI_API_KEY else 'NOT SET'}")
+    
     t2s = Text2SQLAgent(db_path, loaded_schema, schema_metadata)
     summarizer = SummarizerAgent()
     print("✅ Agents initialized successfully")
@@ -110,6 +129,9 @@ except Exception as e:
     print(f"⚠️  Warning: Failed to initialize agents: {agent_error}")
     print("⚠️  The /query endpoint will return errors until agents are properly configured.")
     print("⚠️  Please check your .env file for LLM_PROVIDER and API keys.")
+    print(f"⚠️  Current LLM_PROVIDER: {config.LLM_PROVIDER}")
+    print(f"⚠️  GOOGLE_API_KEY set: {bool(config.GOOGLE_API_KEY)}")
+    print(f"⚠️  OPENAI_API_KEY set: {bool(config.OPENAI_API_KEY)}")
 
 # ---------------------------------------------
 # Text2SQL query endpoint

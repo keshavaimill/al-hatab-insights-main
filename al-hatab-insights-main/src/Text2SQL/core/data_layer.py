@@ -509,12 +509,25 @@ class IntermediateDataFrameBuilder:
         # Clip negative on_shelf_units
         df["on_shelf_units"] = df["on_shelf_units"].clip(lower=0)
         
+        # Check if waste_units and waste_cost columns exist in CSV (use them if available)
+        use_csv_waste = "waste_units" in df.columns and "waste_cost" in df.columns
+        if use_csv_waste:
+            logger.info(f"Using waste_units and waste_cost columns from CSV for store KPIs")
+        else:
+            logger.warning(f"waste_units/waste_cost columns not found in CSV, will calculate waste from on_shelf_units - planogram_capacity_units")
+        
         # Level 1: By Store, SKU, date, hour
         if "store_id" in df.columns and "sku_id" in df.columns:
-            granular = df.groupby(["store_id", "sku_id", "date", "hour"]).agg({
+            agg_dict = {
                 "on_shelf_units": "sum",
                 "planogram_capacity_units": "sum",
-            }).reset_index()
+            }
+            # Include waste columns if they exist in CSV
+            if use_csv_waste:
+                agg_dict["waste_units"] = "sum"
+                agg_dict["waste_cost"] = "sum"
+            
+            granular = df.groupby(["store_id", "sku_id", "date", "hour"]).agg(agg_dict).reset_index()
             
             # On-Shelf Availability: clipped on_shelf / capacity
             granular["on_shelf_availability_pct"] = quality_layer.safe_divide(
@@ -526,19 +539,28 @@ class IntermediateDataFrameBuilder:
             # Stockout incidents: count rows where on_shelf = 0
             granular["stockout_incidents"] = (granular["on_shelf_units"] == 0).astype(int)
             
-            # Waste: excess over capacity
-            granular["waste_units"] = (granular["on_shelf_units"] - granular["planogram_capacity_units"]).clip(lower=0)
-            granular["waste_sar"] = granular["waste_units"] * 10.0
+            # Waste: use CSV values if available, otherwise calculate
+            if use_csv_waste:
+                granular["waste_units"] = granular["waste_units"].fillna(0).clip(lower=0)
+                granular["waste_sar"] = granular["waste_cost"].fillna(0)
+            else:
+                granular["waste_units"] = (granular["on_shelf_units"] - granular["planogram_capacity_units"]).clip(lower=0)
+                granular["waste_sar"] = granular["waste_units"] * 10.0
             
             granular["kpi_level"] = "store_sku_date_hour"
             kpi_dfs.append(granular)
         
         # Level 2: By Store, SKU
         if "store_id" in df.columns and "sku_id" in df.columns:
-            sku_level = df.groupby(["store_id", "sku_id"]).agg({
+            agg_dict = {
                 "on_shelf_units": "sum",
                 "planogram_capacity_units": "sum",
-            }).reset_index()
+            }
+            if use_csv_waste:
+                agg_dict["waste_units"] = "sum"
+                agg_dict["waste_cost"] = "sum"
+            
+            sku_level = df.groupby(["store_id", "sku_id"]).agg(agg_dict).reset_index()
             
             sku_level["on_shelf_availability_pct"] = quality_layer.safe_divide(
                 sku_level["on_shelf_units"],
@@ -547,18 +569,28 @@ class IntermediateDataFrameBuilder:
             ) * 100.0
             
             sku_level["stockout_incidents"] = (sku_level["on_shelf_units"] == 0).astype(int)
-            sku_level["waste_units"] = (sku_level["on_shelf_units"] - sku_level["planogram_capacity_units"]).clip(lower=0)
-            sku_level["waste_sar"] = sku_level["waste_units"] * 10.0
+            
+            if use_csv_waste:
+                sku_level["waste_units"] = sku_level["waste_units"].fillna(0).clip(lower=0)
+                sku_level["waste_sar"] = sku_level["waste_cost"].fillna(0)
+            else:
+                sku_level["waste_units"] = (sku_level["on_shelf_units"] - sku_level["planogram_capacity_units"]).clip(lower=0)
+                sku_level["waste_sar"] = sku_level["waste_units"] * 10.0
             
             sku_level["kpi_level"] = "store_sku"
             kpi_dfs.append(sku_level)
         
         # Level 3: By Store
         if "store_id" in df.columns:
-            store_level = df.groupby(["store_id"]).agg({
+            agg_dict = {
                 "on_shelf_units": "sum",
                 "planogram_capacity_units": "sum",
-            }).reset_index()
+            }
+            if use_csv_waste:
+                agg_dict["waste_units"] = "sum"
+                agg_dict["waste_cost"] = "sum"
+            
+            store_level = df.groupby(["store_id"]).agg(agg_dict).reset_index()
             
             store_level["on_shelf_availability_pct"] = quality_layer.safe_divide(
                 store_level["on_shelf_units"],
@@ -571,8 +603,12 @@ class IntermediateDataFrameBuilder:
             store_level = store_level.merge(stockouts, on="store_id", how="left")
             store_level["stockout_incidents"] = store_level["stockout_incidents"].fillna(0).astype(int)
             
-            store_level["waste_units"] = (store_level["on_shelf_units"] - store_level["planogram_capacity_units"]).clip(lower=0)
-            store_level["waste_sar"] = store_level["waste_units"] * 10.0
+            if use_csv_waste:
+                store_level["waste_units"] = store_level["waste_units"].fillna(0).clip(lower=0)
+                store_level["waste_sar"] = store_level["waste_cost"].fillna(0)
+            else:
+                store_level["waste_units"] = (store_level["on_shelf_units"] - store_level["planogram_capacity_units"]).clip(lower=0)
+                store_level["waste_sar"] = store_level["waste_units"] * 10.0
             
             store_level["kpi_level"] = "store"
             kpi_dfs.append(store_level)

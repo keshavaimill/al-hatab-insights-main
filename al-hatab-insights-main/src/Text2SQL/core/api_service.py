@@ -149,6 +149,9 @@ class StoreKPIService:
         df = global_data_layer.get_store_kpis(store_id=store_id)
         
         if df.empty:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"No store KPI data found for store_id: {store_id}")
             return {
                 "storeId": store_id or "UNKNOWN",
                 "onShelfAvailability": 0.0,
