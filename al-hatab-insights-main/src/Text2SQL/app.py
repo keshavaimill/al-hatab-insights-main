@@ -114,12 +114,20 @@ try:
         if not config.GOOGLE_API_KEY:
             raise ValueError("GOOGLE_API_KEY is required but not set. Please check your .env file.")
         print(f"✅ Using Google Gemini API (model: {config.GOOGLE_MODEL})")
-        print(f"✅ API Key loaded: {'*' * (len(config.GOOGLE_API_KEY) - 8) + config.GOOGLE_API_KEY[-8:] if config.GOOGLE_API_KEY else 'NOT SET'}")
+        if config.GOOGLE_API_KEY and len(config.GOOGLE_API_KEY) > 8:
+            masked_key = '*' * (len(config.GOOGLE_API_KEY) - 8) + config.GOOGLE_API_KEY[-8:]
+        else:
+            masked_key = 'NOT SET' if not config.GOOGLE_API_KEY else 'SET (too short to mask)'
+        print(f"✅ API Key loaded: {masked_key}")
     elif config.LLM_PROVIDER == "openai":
         if not config.OPENAI_API_KEY:
             raise ValueError("OPENAI_API_KEY is required but not set. Please check your .env file.")
         print(f"✅ Using OpenAI API (model: {config.OPENAI_MODEL})")
-        print(f"✅ API Key loaded: {'*' * (len(config.OPENAI_API_KEY) - 8) + config.OPENAI_API_KEY[-8:] if config.OPENAI_API_KEY else 'NOT SET'}")
+        if config.OPENAI_API_KEY and len(config.OPENAI_API_KEY) > 8:
+            masked_key = '*' * (len(config.OPENAI_API_KEY) - 8) + config.OPENAI_API_KEY[-8:]
+        else:
+            masked_key = 'NOT SET' if not config.OPENAI_API_KEY else 'SET (too short to mask)'
+        print(f"✅ API Key loaded: {masked_key}")
     
     t2s = Text2SQLAgent(db_path, loaded_schema, schema_metadata)
     summarizer = SummarizerAgent()

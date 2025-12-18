@@ -990,23 +990,32 @@ class GlobalDataLayer:
                 
                 factory_data = factory_rows.iloc[0]
                 
-                # Service Level = Production Adherence (dispatch adherence)
+                # Service Level = Average(production_adherence_pct)
                 service_level = float(factory_data.get("production_adherence_pct", 0.0))
                 
-                # Waste % = waste_units / total_production
-                # Get total production from aggregated data
-                total_prod = 0.0
-                if "prod_actual_qty" in factory_data.index:
-                    total_prod = float(factory_data.get("prod_actual_qty", 0))
-                elif "factory_predictions" in raw_dfs:
+                # Waste % = Sum(scrap_qty) / Sum(prod_actual_qty) * 100
+                waste_pct = 0.0
+                if "factory_predictions" in raw_dfs:
                     factory_raw = raw_dfs["factory_predictions"]
                     if not factory_raw.empty and factory_id in factory_raw.get("factory_id", pd.Series()).dropna().values:
-                        total_prod = float(factory_raw[factory_raw["factory_id"] == factory_id]["prod_actual_qty"].sum())
+                        factory_rows_raw = factory_raw[factory_raw["factory_id"] == factory_id]
+                        if len(factory_rows_raw) > 0:
+                            if "scrap_qty" in factory_rows_raw.columns and "prod_actual_qty" in factory_rows_raw.columns:
+                                scrap_sum = factory_rows_raw["scrap_qty"].sum()
+                                actual_sum = factory_rows_raw["prod_actual_qty"].sum()
+                                if actual_sum > 0:
+                                    waste_pct = (scrap_sum / actual_sum) * 100
+                else:
+                    # Fallback: use waste_units from KPI data if raw data not available
+                    waste_units = float(factory_data.get("waste_units", 0))
+                    total_prod = 0.0
+                    if "prod_actual_qty" in factory_data.index:
+                        total_prod = float(factory_data.get("prod_actual_qty", 0))
+                    if total_prod > 0:
+                        waste_pct = (waste_units / total_prod) * 100
                 
-                waste_units = float(factory_data.get("waste_units", 0))
-                waste_pct = (waste_units / max(total_prod, 1)) * 100 if total_prod > 0 else 0.0
-                
-                # MAPE: Compare actual vs plan (from raw data)
+                # MAPE: (|Actual Qty - Predicted Demand| / Actual Qty) * 100
+                # Note: For factory, Predicted Demand = prod_plan_qty, Actual Qty = prod_actual_qty
                 mape = 0.0
                 if "factory_predictions" in raw_dfs:
                     factory_raw = raw_dfs["factory_predictions"]
@@ -1015,22 +1024,21 @@ class GlobalDataLayer:
                         if len(factory_rows_raw) > 0:
                             actual_sum = factory_rows_raw["prod_actual_qty"].sum()
                             plan_sum = factory_rows_raw["prod_plan_qty"].sum()
-                            if plan_sum > 0:
-                                mape = abs((actual_sum - plan_sum) / plan_sum) * 100
+                            if actual_sum > 0:  # Use actual in denominator
+                                mape = abs((actual_sum - plan_sum) / actual_sum) * 100
                 
-                # Alerts: Rule-based
+                # Alerts: Waste % exceeds 10%
                 alerts = 0
-                if service_level < 90:
-                    alerts += 1
-                if waste_pct > 5:
-                    alerts += 1
-                if mape > 10:
+                if waste_pct > 10:
                     alerts += 1
                 
-                # Status
-                if service_level >= 95 and waste_pct <= 2 and mape <= 5:
+                # Status thresholds:
+                # Good: Service Level > 90% AND Waste < 5%
+                # Warning: Service Level 75-90% OR Waste 5-15%
+                # Critical: Service Level < 75% OR Waste > 15%
+                if service_level > 90 and waste_pct < 5:
                     status = "good"
-                elif service_level >= 90 and waste_pct <= 4 and mape <= 7:
+                elif (75 <= service_level <= 90) or (5 <= waste_pct <= 15):
                     status = "warning"
                 else:
                     status = "danger"
@@ -1056,13 +1064,23 @@ class GlobalDataLayer:
                 
                 dc_data = dc_rows.iloc[0]
                 
-                # Service Level = service_level_pct
+                # Service Level = Average(service_level_pct)
                 service_level = float(dc_data.get("service_level_pct", 0.0))
                 
-                # Waste % = waste_pct
-                waste_pct = float(dc_data.get("waste_pct", 0.0))
+                # Waste % = Sum(expiring_within_24h_units) / Sum(opening_stock_units) * 100
+                waste_pct = 0.0
+                if "dc_forecasts" in raw_dfs:
+                    dc_raw = raw_dfs["dc_forecasts"]
+                    if not dc_raw.empty and dc_id in dc_raw.get("dc_id", pd.Series()).dropna().values:
+                        dc_rows_raw = dc_raw[dc_raw["dc_id"] == dc_id]
+                        if len(dc_rows_raw) > 0:
+                            if "expiring_within_24h_units" in dc_rows_raw.columns and "opening_stock_units" in dc_rows_raw.columns:
+                                expiring_sum = dc_rows_raw["expiring_within_24h_units"].sum()
+                                opening_sum = dc_rows_raw["opening_stock_units"].sum()
+                                if opening_sum > 0:
+                                    waste_pct = (expiring_sum / opening_sum) * 100
                 
-                # MAPE: Compare opening_stock vs predicted_demand
+                # MAPE: (|Actual Qty - Predicted Demand| / Actual Qty) * 100
                 mape = 0.0
                 if "dc_forecasts" in raw_dfs:
                     dc_raw = raw_dfs["dc_forecasts"]
@@ -1071,22 +1089,22 @@ class GlobalDataLayer:
                         if len(dc_rows_raw) > 0 and "opening_stock_units" in dc_rows_raw.columns and "predicted_demand" in dc_rows_raw.columns:
                             actual = dc_rows_raw["opening_stock_units"].sum()
                             forecast = dc_rows_raw["predicted_demand"].sum()
-                            if forecast > 0:
-                                mape = abs((actual - forecast) / forecast) * 100
+                            if actual > 0:  # Use actual in denominator
+                                mape = abs((actual - forecast) / actual) * 100
                 
-                # Alerts
+                # Alerts: Count of rows where on_shelf_units <= 0 (Stockouts) OR Waste % exceeds 10%
                 alerts = 0
-                if service_level < 90:
+                if waste_pct > 10:
                     alerts += 1
-                if waste_pct > 5:
-                    alerts += 1
-                if mape > 10:
-                    alerts += 1
+                # Note: DC doesn't have on_shelf_units, so stockout check doesn't apply
                 
-                # Status
-                if service_level >= 95 and waste_pct <= 2 and mape <= 5:
+                # Status thresholds:
+                # Good: Service Level > 90% AND Waste < 5%
+                # Warning: Service Level 75-90% OR Waste 5-15%
+                # Critical: Service Level < 75% OR Waste > 15%
+                if service_level > 90 and waste_pct < 5:
                     status = "good"
-                elif service_level >= 90 and waste_pct <= 4 and mape <= 7:
+                elif (75 <= service_level <= 90) or (5 <= waste_pct <= 15):
                     status = "warning"
                 else:
                     status = "danger"
@@ -1112,15 +1130,37 @@ class GlobalDataLayer:
                 
                 store_data = store_rows.iloc[0]
                 
-                # Service Level = on_shelf_availability (proxy for 1 - stockout_flag %)
-                service_level = float(store_data.get("on_shelf_availability_pct", 0.0))
+                # Service Level = Count(on_shelf_units > 0) / Total Rows * 100
+                service_level = 0.0
+                if "store_forecasts" in raw_dfs:
+                    store_raw = raw_dfs["store_forecasts"]
+                    if not store_raw.empty and store_id in store_raw.get("store_id", pd.Series()).dropna().values:
+                        store_rows_raw = store_raw[store_raw["store_id"] == store_id]
+                        if len(store_rows_raw) > 0 and "on_shelf_units" in store_rows_raw.columns:
+                            total_rows = len(store_rows_raw)
+                            positive_stock_rows = len(store_rows_raw[store_rows_raw["on_shelf_units"] > 0])
+                            if total_rows > 0:
+                                service_level = (positive_stock_rows / total_rows) * 100
+                else:
+                    # Fallback to on_shelf_availability_pct if raw data not available
+                    service_level = float(store_data.get("on_shelf_availability_pct", 0.0))
                 
-                # Waste % = waste_units / capacity (simplified)
+                # Waste % = Sum(waste_units) / Sum(predicted_demand) * 100
+                waste_pct = 0.0
                 waste_units = float(store_data.get("waste_units", 0))
-                # Approximate from availability percentage
-                waste_pct = waste_units / max(service_level, 1) if service_level > 0 else 0.0
+                if "store_forecasts" in raw_dfs:
+                    store_raw = raw_dfs["store_forecasts"]
+                    if not store_raw.empty and store_id in store_raw.get("store_id", pd.Series()).dropna().values:
+                        store_rows_raw = store_raw[store_raw["store_id"] == store_id]
+                        if len(store_rows_raw) > 0 and "predicted_demand" in store_rows_raw.columns:
+                            predicted_sum = store_rows_raw["predicted_demand"].sum()
+                            if predicted_sum > 0:
+                                waste_pct = (waste_units / predicted_sum) * 100
+                else:
+                    # Fallback: if no raw data, use waste_units from KPI data
+                    waste_pct = 0.0  # Can't calculate without predicted_demand
                 
-                # MAPE: Compare on_shelf vs predicted_demand
+                # MAPE: (|Actual Qty - Predicted Demand| / Actual Qty) * 100
                 mape = 0.0
                 if "store_forecasts" in raw_dfs:
                     store_raw = raw_dfs["store_forecasts"]
@@ -1129,20 +1169,24 @@ class GlobalDataLayer:
                         if len(store_rows_raw) > 0 and "on_shelf_units" in store_rows_raw.columns and "predicted_demand" in store_rows_raw.columns:
                             actual = store_rows_raw["on_shelf_units"].clip(lower=0).sum()
                             forecast = store_rows_raw["predicted_demand"].sum()
-                            if forecast > 0:
-                                mape = abs((actual - forecast) / forecast) * 100
+                            if actual > 0:  # Use actual in denominator
+                                mape = abs((actual - forecast) / actual) * 100
                 
-                # Alerts
-                alerts = int(store_data.get("stockout_incidents", 0))
-                if service_level < 90:
+                # Alerts: Count of rows where on_shelf_units <= 0 (Stockouts) OR Waste % exceeds 10%
+                alerts = 0
+                stockout_count = int(store_data.get("stockout_incidents", 0))
+                if stockout_count > 0:
                     alerts += 1
-                if waste_pct > 5:
+                if waste_pct > 10:
                     alerts += 1
                 
-                # Status
-                if service_level >= 95 and waste_pct <= 2 and mape <= 5:
+                # Status thresholds:
+                # Good: Service Level > 90% AND Waste < 5%
+                # Warning: Service Level 75-90% OR Waste 5-15%
+                # Critical: Service Level < 75% OR Waste > 15%
+                if service_level > 90 and waste_pct < 5:
                     status = "good"
-                elif service_level >= 90 and waste_pct <= 4 and mape <= 7:
+                elif (75 <= service_level <= 90) or (5 <= waste_pct <= 15):
                     status = "warning"
                 else:
                     status = "danger"
