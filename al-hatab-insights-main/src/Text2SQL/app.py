@@ -74,19 +74,42 @@ loaded_schema = schema_loader.load()
 
 # Build local SQLite DB - use absolute path
 db_path = os.path.join(BASE_DIR, "local.db")
-build_database(schema, db_path)
+try:
+    build_database(schema, db_path)
+    print("✅ Database built successfully")
+except Exception as e:
+    print(f"⚠️  Warning: Database build failed: {str(e)}")
 
 # Load schema metadata for Text2SQLAgent
 schema_metadata_path = os.path.join(BASE_DIR, "schema_metadata.json")
-with open(schema_metadata_path, "r") as f:
-    schema_metadata = json.load(f)
+schema_metadata = {}
+try:
+    if os.path.exists(schema_metadata_path):
+        with open(schema_metadata_path, "r") as f:
+            schema_metadata = json.load(f)
+        print("✅ Schema metadata loaded successfully")
+    else:
+        print(f"⚠️  Warning: schema_metadata.json not found at {schema_metadata_path}")
+except Exception as e:
+    print(f"⚠️  Warning: Failed to load schema metadata: {str(e)}")
 
 
 # ---------------------------------------------
-# Initialize agents
+# Initialize agents (with error handling)
 # ---------------------------------------------
-t2s = Text2SQLAgent(db_path, loaded_schema, schema_metadata)
-summarizer = SummarizerAgent()
+t2s = None
+summarizer = None
+agent_error = None
+
+try:
+    t2s = Text2SQLAgent(db_path, loaded_schema, schema_metadata)
+    summarizer = SummarizerAgent()
+    print("✅ Agents initialized successfully")
+except Exception as e:
+    agent_error = str(e)
+    print(f"⚠️  Warning: Failed to initialize agents: {agent_error}")
+    print("⚠️  The /query endpoint will return errors until agents are properly configured.")
+    print("⚠️  Please check your .env file for LLM_PROVIDER and API keys.")
 
 # ---------------------------------------------
 # Text2SQL query endpoint
@@ -98,10 +121,23 @@ def query():
         return jsonify({}), 200
     
     try:
+        # Check if agents are initialized
+        if t2s is None or summarizer is None:
+            error_msg = agent_error or "Agents not initialized. Please check backend configuration."
+            return jsonify({
+                "error": "Agents not available",
+                "details": error_msg,
+                "sql": None,
+                "data": [],
+                "summary": "The AI agents are not properly configured. Please check the backend logs for details. Common issues: missing API keys (GOOGLE_API_KEY or OPENAI_API_KEY) in environment variables.",
+                "viz": None,
+                "mime": None
+            }), 503
+        
         # Validate request body
         if not request.json:
             return jsonify({"error": "Request body is required"}), 400
-        
+
         body = request.json
         question = body.get("question", "").strip()
         
@@ -280,10 +316,13 @@ def global_kpis():
 @app.route("/health", methods=["GET", "OPTIONS"])
 def health():
     """Health check endpoint to verify backend is running"""
+    agents_status = "ready" if (t2s is not None and summarizer is not None) else "not_initialized"
     return jsonify({
         "status": "healthy",
         "service": "al-hatab-insights-backend",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "agents": agents_status,
+        "agent_error": agent_error if agent_error else None
     }), 200
 
 

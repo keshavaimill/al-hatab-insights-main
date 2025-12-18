@@ -71,19 +71,19 @@ const Store = () => {
 
   return (
     <Layout>
-      <div className="space-y-6 animate-fade-in">
+      <div className="space-y-4 sm:space-y-6 animate-fade-in">
         {/* Page Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-3">
-              <StoreIcon className="w-7 h-7 text-primary" />
-              {t("pages.store.title")}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2 sm:gap-3">
+              <StoreIcon className="w-5 h-5 sm:w-7 sm:h-7 text-primary shrink-0" />
+              <span className="truncate">{t("pages.store.title")}</span>
             </h1>
-            <p className="text-muted-foreground">{t("pages.store.subtitle")}</p>
+            <p className="text-sm sm:text-base text-muted-foreground truncate">{t("pages.store.subtitle")}</p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <select
-              className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm"
+              className="bg-secondary border border-border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm min-w-[160px]"
               value={selectedStore}
               onChange={(e) => setSelectedStore(e.target.value)}
             >
@@ -96,7 +96,7 @@ const Store = () => {
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
           <KPICard
             title={t("pages.store.onShelfAvailability")}
             value={storeKpis?.onShelfAvailability ?? fallbackStoreKPIs.onShelfAvailability}
@@ -129,22 +129,22 @@ const Store = () => {
         </div>
 
         {/* Hourly Sales Chart */}
-        <div className="bg-card rounded-xl border border-border p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-semibold">{t("pages.store.hourlySalesVsForecast")}</h3>
-            <div className="flex items-center gap-4 text-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-primary" />
+        <div className="bg-card rounded-xl border border-border p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <h3 className="font-semibold text-sm sm:text-base">{t("pages.store.hourlySalesVsForecast")}</h3>
+            <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-primary shrink-0" />
                 <span className="text-muted-foreground">{t("pages.store.sales")}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-chart-4" />
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-chart-4 shrink-0" />
                 <span className="text-muted-foreground">{t("pages.store.forecast")}</span>
               </div>
             </div>
           </div>
 
-          <div className="h-[250px]">
+          <div className="h-[220px] sm:h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={storeHourlySales}>
                 <defs>
@@ -156,14 +156,16 @@ const Store = () => {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                 <XAxis
                   dataKey="hour"
-                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 9 }}
                   tickLine={false}
                   axisLine={{ stroke: "hsl(var(--border))" }}
+                  interval={4}
                 />
                 <YAxis
-                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 9 }}
                   tickLine={false}
                   axisLine={{ stroke: "hsl(var(--border))" }}
+                  width={35}
                 />
                 <Tooltip
                   contentStyle={{
@@ -193,25 +195,25 @@ const Store = () => {
         </div>
 
         {/* Stockout Timeline */}
-        <div className="bg-card rounded-xl border border-border p-6">
-          <h3 className="font-semibold mb-4">Stockout Timeline (Today)</h3>
+        <div className="bg-card rounded-xl border border-border p-4 sm:p-6">
+          <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">Stockout Timeline (Today)</h3>
           <div className="relative">
             {/* Hour markers */}
-            <div className="flex justify-between mb-2 text-xs text-muted-foreground">
+            <div className="flex justify-between mb-2 text-[10px] sm:text-xs text-muted-foreground">
               {[6, 9, 12, 15, 18, 21].map((hour) => (
                 <span key={hour}>{hour}:00</span>
               ))}
             </div>
             
             {/* Timeline bar */}
-            <div className="relative h-10 bg-secondary/50 rounded-lg overflow-hidden">
+            <div className="relative h-8 sm:h-10 bg-secondary/50 rounded-lg overflow-hidden">
               {stockoutTimeline.map((stockout, index) => {
                 const startPercent = ((stockout.hour - 6) / 18) * 100;
                 const widthPercent = (stockout.duration / (18 * 60)) * 100;
                 return (
                   <div
                     key={index}
-                    className="absolute top-1 bottom-1 rounded flex items-center justify-center text-xs text-primary-foreground font-medium"
+                    className="absolute top-0.5 bottom-0.5 sm:top-1 sm:bottom-1 rounded flex items-center justify-center text-[10px] sm:text-xs text-primary-foreground font-medium"
                     style={{
                       left: `${startPercent}%`,
                       width: `${Math.max(widthPercent, 3)}%`,
@@ -219,14 +221,14 @@ const Store = () => {
                     }}
                     title={`${stockout.sku} - ${stockout.duration} min stockout`}
                   >
-                    {stockout.sku}
+                    <span className="truncate">{stockout.sku}</span>
                   </div>
                 );
               })}
             </div>
             
             {/* Legend */}
-            <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
+            <div className="mt-2 sm:mt-3 flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-muted-foreground">
               <span>Total stockout time: <span className="text-primary font-medium">1h 40m</span></span>
               <span>Affected SKUs: <span className="text-foreground font-medium">3</span></span>
             </div>
@@ -235,11 +237,11 @@ const Store = () => {
 
         {/* Shelf Performance Table */}
         <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <div className="p-4 border-b border-border">
-            <h3 className="font-semibold">Shelf Performance</h3>
+          <div className="p-3 sm:p-4 border-b border-border">
+            <h3 className="font-semibold text-sm sm:text-base">Shelf Performance</h3>
           </div>
-          <div className="overflow-x-auto">
-            <table className="data-table">
+          <div className="overflow-x-auto -mx-3 sm:mx-0 data-table-wrapper">
+            <table className="data-table min-w-full">
               <thead>
                 <tr>
                   <th>SKU</th>
@@ -259,18 +261,18 @@ const Store = () => {
                     <td>{item.planogramCap}</td>
                     <td>{item.onShelf}</td>
                     <td>
-                      <div className="flex items-center gap-2">
-                        <div className="w-16 h-2 bg-secondary rounded-full overflow-hidden">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <div className="w-12 sm:w-16 h-2 bg-secondary rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full ${item.shelfFill >= 80 ? "bg-success" : item.shelfFill >= 50 ? "bg-warning" : "bg-destructive"}`}
                             style={{ width: `${item.shelfFill}%` }}
                           />
                         </div>
-                        <span className="text-sm">{item.shelfFill}%</span>
+                        <span className="text-xs sm:text-sm whitespace-nowrap">{item.shelfFill}%</span>
                       </div>
                     </td>
-                    <td className="text-primary font-medium">{item.salesPerHour}</td>
-                    <td className={item.wasteLast7 > 15 ? "text-destructive" : item.wasteLast7 > 10 ? "text-warning" : "text-success"}>
+                    <td className="text-primary font-medium whitespace-nowrap">{item.salesPerHour}</td>
+                    <td className={`whitespace-nowrap ${item.wasteLast7 > 15 ? "text-destructive" : item.wasteLast7 > 10 ? "text-warning" : "text-success"}`}>
                       {item.wasteLast7}
                     </td>
                   </tr>
@@ -282,24 +284,24 @@ const Store = () => {
 
         {/* AI Store Manager Actions */}
         <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <div className="p-4 border-b border-border flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10 text-primary">
-              <Lightbulb className="w-5 h-5" />
+          <div className="p-3 sm:p-4 border-b border-border flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 text-primary shrink-0">
+              <Lightbulb className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h3 className="font-semibold">AI Store Manager Recommendations</h3>
-              <p className="text-sm text-muted-foreground">Auto-generated action items</p>
+            <div className="min-w-0">
+              <h3 className="font-semibold text-sm sm:text-base">AI Store Manager Recommendations</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Auto-generated action items</p>
             </div>
           </div>
           <div className="divide-y divide-border">
             {storeActions.map((action, index) => (
-              <div key={index} className="p-4 flex items-start gap-4 hover:bg-secondary/30 transition-colors">
-                <span className={`px-2 py-1 rounded-full text-xs font-medium shrink-0 ${getPriorityColor(action.priority)}`}>
+              <div key={index} className="p-3 sm:p-4 flex items-start gap-2 sm:gap-4 hover:bg-secondary/30 transition-colors">
+                <span className={`px-2 py-1 rounded-full text-[10px] sm:text-xs font-medium shrink-0 ${getPriorityColor(action.priority)}`}>
                   {action.priority}
                 </span>
-                <div>
-                  <p className="font-medium">{action.action}</p>
-                  <p className="text-sm text-muted-foreground mt-1">{action.reason}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-sm sm:text-base">{action.action}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">{action.reason}</p>
                 </div>
               </div>
             ))}

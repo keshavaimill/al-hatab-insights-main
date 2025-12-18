@@ -13,19 +13,19 @@ const NotFound = () => {
 
   return (
     <Layout>
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-        <div className="text-8xl font-bold text-primary/20 mb-4">404</div>
-        <h1 className="text-2xl font-bold mb-2">Page Not Found</h1>
-        <p className="text-muted-foreground mb-8 max-w-md">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="text-6xl sm:text-8xl font-bold text-primary/20 mb-3 sm:mb-4">404</div>
+        <h1 className="text-xl sm:text-2xl font-bold mb-2">Page Not Found</h1>
+        <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8 max-w-md">
           The page you're looking for doesn't exist or has been moved.
         </p>
-        <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => window.history.back()}>
+        <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 w-full sm:w-auto">
+          <Button variant="outline" onClick={() => window.history.back()} className="w-full sm:w-auto">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Go Back
           </Button>
-          <Link to="/">
-            <Button>
+          <Link to="/" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto">
               <Home className="w-4 h-4 mr-2" />
               Command Center
             </Button>

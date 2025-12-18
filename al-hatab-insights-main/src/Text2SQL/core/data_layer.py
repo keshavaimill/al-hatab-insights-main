@@ -733,10 +733,11 @@ class GlobalDataLayer:
         Get global Command Center KPIs aggregated across Factory, DC, and Store.
         
         Computes:
-        1. Forecast Accuracy (%): Actual vs Forecast (SKU/hour or aggregated)
-           - Store: pos_sales_units vs forecast_qty
-           - DC: outbound_to_retail_units vs forecast_qty
-           - Factory: prod_actual_qty vs forecast_qty
+        1. Forecast Accuracy (%): Calculated as 100 - AVG(MAPE) from predictions.csv
+           - Reads MAPE column from predictions.csv (factory_predictions)
+           - Parses percentage strings (e.g., "0.94%" → 0.94)
+           - Calculates average MAPE across all predictions
+           - Forecast Accuracy = 100 - AVG(MAPE)
         
         2. Waste Cost (SAR): Waste units × cost
            - Store: waste_units × cost
@@ -768,73 +769,40 @@ class GlobalDataLayer:
         results = {}
         
         # 1. Forecast Accuracy (%)
-        # Compare actual vs forecast across all nodes
-        # Use raw factory data for actual vs plan comparison
+        # Calculate as: 100 - AVG(MAPE) from predictions.csv
+        # MAPE column contains percentage strings like "0.94%", "0.30%", etc.
         forecast_accuracy = 0.0
-        total_actual = 0.0
-        total_forecast = 0.0
         
         # Get KPI dataframes for later use
         factory_df = self.get_factory_kpis()
         dc_df = self.get_dc_kpis()
         store_df = self.get_store_kpis()
         
-        # Factory: prod_actual_qty vs prod_plan_qty (using plan as forecast)
-        # Use raw data since KPI dataframe might not have these columns
+        # Read MAPE from predictions.csv (factory_predictions)
         if "factory_predictions" in raw_dfs:
             factory_raw = raw_dfs["factory_predictions"]
-            if not factory_raw.empty:
-                if "prod_actual_qty" in factory_raw.columns and "prod_plan_qty" in factory_raw.columns:
-                    factory_actual = factory_raw["prod_actual_qty"].sum()
-                    factory_forecast = factory_raw["prod_plan_qty"].sum()
-                    total_actual += float(factory_actual)
-                    total_forecast += float(factory_forecast)
-        
-        # For DC and Store: Use factory's released_to_dc_qty as proxy for actual outbound
-        # and compare to predicted_demand from forecasts
-        if "factory_predictions" in raw_dfs:
-            factory_raw = raw_dfs["factory_predictions"]
-            if not factory_raw.empty and "released_to_dc_qty" in factory_raw.columns:
-                # Use released_to_dc_qty as proxy for actual DC outbound
-                dc_actual_proxy = factory_raw["released_to_dc_qty"].sum()
-                total_actual += float(dc_actual_proxy)
-        
-        # Get forecasted demand from DC and Store forecasts
-        if "dc_forecasts" in raw_dfs:
-            dc_raw = raw_dfs["dc_forecasts"]
-            if not dc_raw.empty and "predicted_demand" in dc_raw.columns:
-                # Use only forecast_hour_offset = 1 (next hour) to avoid double-counting
-                if "forecast_hour_offset" in dc_raw.columns:
-                    dc_raw_filtered = dc_raw[dc_raw["forecast_hour_offset"] == 1].copy()
-                    if not dc_raw_filtered.empty:
-                        dc_forecast = dc_raw_filtered["predicted_demand"].sum()
-                        total_forecast += float(dc_forecast)
+            if not factory_raw.empty and "MAPE" in factory_raw.columns:
+                # Parse MAPE column: remove % sign and convert to float
+                mape_values = factory_raw["MAPE"].astype(str).str.replace("%", "").str.strip()
+                # Convert to numeric, handling any invalid values
+                mape_numeric = pd.to_numeric(mape_values, errors="coerce")
+                # Remove NaN values
+                mape_numeric = mape_numeric.dropna()
+                
+                if len(mape_numeric) > 0:
+                    # Calculate average MAPE
+                    avg_mape = float(mape_numeric.mean())
+                    # Forecast accuracy = 100 - AVG(MAPE)
+                    forecast_accuracy = max(0.0, min(100.0, 100.0 - avg_mape))
                 else:
-                    dc_forecast = dc_raw["predicted_demand"].sum()
-                    total_forecast += float(dc_forecast)
+                    logger.warning("No valid MAPE values found in predictions.csv")
+            else:
+                logger.warning("MAPE column not found in factory_predictions dataframe")
         
-        if "store_forecasts" in raw_dfs:
-            store_raw = raw_dfs["store_forecasts"]
-            if not store_raw.empty and "predicted_demand" in store_raw.columns:
-                # Use only forecast_hour_offset = 1 (next hour) to avoid double-counting
-                if "forecast_hour_offset" in store_raw.columns:
-                    store_raw_filtered = store_raw[store_raw["forecast_hour_offset"] == 1].copy()
-                    if not store_raw_filtered.empty:
-                        store_forecast = store_raw_filtered["predicted_demand"].sum()
-                        total_forecast += float(store_forecast)
-                else:
-                    store_forecast = store_raw["predicted_demand"].sum()
-                    total_forecast += float(store_forecast)
-        
-        if total_forecast > 0:
-            # MAPE-based accuracy: 100 - MAPE
-            # MAPE = Mean Absolute Percentage Error
-            mape = abs((total_actual - total_forecast) / total_forecast) * 100
-            forecast_accuracy = max(0, 100 - mape)
-        else:
-            # If no forecast data, use factory production adherence as proxy
-            if not factory_df.empty and "production_adherence_pct" in factory_df.columns:
-                forecast_accuracy = float(factory_df["production_adherence_pct"].mean())
+        # Fallback: If no MAPE data, use factory production adherence as proxy
+        if forecast_accuracy == 0.0 and not factory_df.empty and "production_adherence_pct" in factory_df.columns:
+            forecast_accuracy = float(factory_df["production_adherence_pct"].mean())
+            logger.info("Using production adherence as fallback for forecast accuracy")
         
         results["forecast_accuracy"] = round(forecast_accuracy, 1)
         

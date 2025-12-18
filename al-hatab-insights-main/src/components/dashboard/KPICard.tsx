@@ -33,37 +33,37 @@ export const KPICard = memo(function KPICard({
 
   return (
     <div
-      className="kpi-card cursor-pointer group h-full flex flex-col justify-between"
+      className="kpi-card cursor-pointer group h-full flex flex-col justify-between p-4 sm:p-5"
       onClick={onClick}
     >
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          <p className="text-sm text-muted-foreground font-medium">{title}</p>
+      <div className="flex items-start justify-between mb-2 sm:mb-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs sm:text-sm text-muted-foreground font-medium truncate">{title}</p>
           <div className="flex items-baseline gap-1 mt-1">
-            <span className="text-3xl font-bold text-foreground">{value}</span>
-            {unit && <span className="text-lg text-muted-foreground">{unit}</span>}
+            <span className="text-2xl sm:text-3xl font-bold text-foreground">{value}</span>
+            {unit && <span className="text-base sm:text-lg text-muted-foreground">{unit}</span>}
           </div>
         </div>
         {icon && (
-          <div className="p-2 rounded-lg bg-primary/10 text-primary">
+          <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 text-primary shrink-0 ml-2">
             {icon}
           </div>
         )}
       </div>
 
-      <div className="flex items-center justify-between mt-4">
+      <div className="flex items-center justify-between mt-3 sm:mt-4 gap-2">
         {trend !== undefined && (
-          <div className={`flex items-center gap-1 ${trendColor}`}>
+          <div className={`flex items-center gap-1 ${trendColor} min-w-0 flex-1`}>
             {isPositive ? (
-              <TrendingUp className="w-4 h-4" />
+              <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />
             ) : (
-              <TrendingDown className="w-4 h-4" />
+              <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />
             )}
-            <span className="text-sm font-medium">
+            <span className="text-xs sm:text-sm font-medium whitespace-nowrap">
               {isPositive ? "+" : ""}{trend}%
             </span>
             {trendLabel && (
-              <span className="text-xs text-muted-foreground ml-1">
+              <span className="text-[10px] sm:text-xs text-muted-foreground ml-1 truncate hidden sm:inline">
                 {trendLabel}
               </span>
             )}
@@ -71,7 +71,7 @@ export const KPICard = memo(function KPICard({
         )}
 
         {chartData && (
-          <div className="sparkline-container">
+          <div className="sparkline-container shrink-0">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <defs>

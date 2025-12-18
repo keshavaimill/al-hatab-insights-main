@@ -76,12 +76,12 @@ export const NodeHealthTable = memo(function NodeHealthTable({ onNodeClick }: No
   const mappedNodes = useMemo(() => nodeHealth, [nodeHealth]);
 
   return (
-    <div className="bg-card rounded-xl border border-border overflow-hidden">
-      <div className="p-4 border-b border-border">
-        <h3 className="font-semibold">{t("pages.commandCenter.nodeHealthSummary")}</h3>
+    <div className="bg-card rounded-xl border border-border overflow-hidden w-full">
+      <div className="p-3 sm:p-4 border-b border-border">
+        <h3 className="font-semibold text-sm sm:text-base">{t("pages.commandCenter.nodeHealthSummary")}</h3>
       </div>
-      <div className="overflow-x-auto">
-        <table className="data-table">
+      <div className="overflow-x-auto w-full">
+        <table className="data-table w-full min-w-[600px]">
           <thead>
             <tr>
               <th>{t("pages.commandCenter.node")}</th>

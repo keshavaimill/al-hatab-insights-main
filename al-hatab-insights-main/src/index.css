@@ -104,9 +104,40 @@
     @apply border-border;
   }
 
+  html {
+    /* Prevent horizontal scroll on mobile */
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    /* Prevent text selection issues on mobile */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Prevent pull-to-refresh on mobile */
+    overscroll-behavior-y: contain;
+    overflow-x: hidden;
+  }
+  
+  /* Prevent horizontal scroll on all containers */
+  * {
+    max-width: 100%;
+  }
+  
+  /* Mobile-specific optimizations */
+  @media (max-width: 768px) {
+    main {
+      overflow-x: hidden;
+    }
+    
+    /* Better touch targets */
+    button, a, [role="button"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -181,28 +212,70 @@
   }
 
   .data-table {
-    @apply w-full text-sm;
+    @apply w-full text-xs sm:text-sm;
   }
 
   .data-table th {
-    @apply text-left text-muted-foreground font-medium py-3 px-4 border-b border-border/50;
+    @apply text-left text-muted-foreground font-medium py-2 sm:py-3 px-2 sm:px-4 border-b border-border/50;
+    @apply whitespace-nowrap;
   }
 
   .data-table td {
-    @apply py-3 px-4 border-b border-border/30;
+    @apply py-2 sm:py-3 px-2 sm:px-4 border-b border-border/30;
+    @apply whitespace-nowrap;
   }
 
   .data-table tbody tr {
     @apply transition-colors hover:bg-secondary/50 cursor-pointer;
   }
 
+  /* Mobile table optimizations */
+  @media (max-width: 640px) {
+    .data-table th,
+    .data-table td {
+      @apply text-[10px] sm:text-xs;
+      padding: 0.5rem 0.5rem;
+    }
+    
+    .data-table th:first-child,
+    .data-table td:first-child {
+      @apply sticky left-0 bg-card z-10;
+      box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
+    }
+  }
+  
+  /* Scrollbar styling for tables */
+  .overflow-x-auto {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  
+  .overflow-x-auto::-webkit-scrollbar {
+    height: 6px;
+  }
+  
+  .overflow-x-auto::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .overflow-x-auto::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 3px;
+  }
+  
+  .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.3);
+  }
+
   .nav-item {
-    @apply flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200;
+    @apply flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg transition-all duration-200;
+    @apply min-h-[44px] touch-manipulation; /* Better touch target */
     color: hsl(var(--sidebar-foreground));
     opacity: 0.85;
   }
 
-  .nav-item:hover {
+  .nav-item:hover,
+  .nav-item:active {
     background-color: hsl(var(--sidebar-accent));
     color: hsl(var(--sidebar-foreground));
     opacity: 1;
@@ -216,8 +289,9 @@
   }
 
   .filter-button {
-    @apply px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200;
+    @apply px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200;
     @apply bg-secondary text-muted-foreground hover:bg-secondary/80 hover:text-foreground;
+    @apply min-h-[36px] touch-manipulation; /* Better touch target */
   }
 
   .filter-button.active {
@@ -245,7 +319,59 @@
   }
 
   .sparkline-container {
-    @apply h-8 w-20;
+    @apply h-6 sm:h-8 w-16 sm:w-20;
+  }
+
+  /* Mobile optimizations */
+  @media (max-width: 640px) {
+    .kpi-card {
+      @apply p-3 sm:p-4;
+    }
+
+    /* Hide sparklines on very small screens */
+    .sparkline-container {
+      @apply hidden sm:block;
+    }
+    
+    /* Better spacing for mobile */
+    .space-y-4 > * + * {
+      margin-top: 0.75rem;
+    }
+
+    .space-y-6 > * + * {
+      margin-top: 1rem;
+    }
+  }
+
+  /* Touch-friendly targets */
+  @media (hover: none) and (pointer: coarse) {
+    button,
+    a,
+    .nav-item,
+    .kpi-card {
+      @apply min-h-[44px];
+    }
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Optimize font loading */
+  @font-face {
+    font-family: 'IBM Plex Sans';
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: 'IBM Plex Mono';
+    font-display: swap;
   }
 
   /* Leaflet map customizations */
@@ -302,7 +428,8 @@
 
   /* Floating Bot Button Enhancements */
   .floating-bot-button {
-    @apply fixed bottom-6 right-6 rounded-2xl shadow-2xl transition-all duration-300 z-40;
+    @apply fixed bottom-4 right-4 sm:bottom-6 sm:right-6 rounded-2xl shadow-2xl transition-all duration-300 z-40;
+    @apply w-14 h-14 touch-manipulation; /* Better touch target */
     background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
     box-shadow: 0 8px 32px hsl(var(--primary) / 0.3);
   }
@@ -310,6 +437,10 @@
   .floating-bot-button:hover {
     box-shadow: 0 12px 48px hsl(var(--primary) / 0.4);
     transform: translateY(-2px);
+  }
+
+  .floating-bot-button:active {
+    transform: scale(0.95);
   }
 
   /* Chat Window Enhancements */
@@ -388,6 +519,122 @@
     -moz-osx-font-smoothing: grayscale;
     backface-visibility: hidden;
     transform: translateZ(0);
+  }
+
+  /* Mobile optimizations */
+  @media (max-width: 640px) {
+    /* Improve touch targets */
+    button,
+    a,
+    input,
+    select,
+    textarea {
+      @apply min-h-[44px];
+    }
+
+    /* Optimize scrolling */
+    * {
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Reduce animations on mobile for better performance */
+    @media (prefers-reduced-motion: no-preference) {
+      .animate-fade-in,
+      .animate-slide-up {
+        animation-duration: 0.3s;
+      }
+    }
+  }
+
+  /* Touch manipulation for better mobile interactions */
+  button,
+  a,
+  [role="button"],
+  .nav-item,
+  .filter-button {
+    touch-action: manipulation;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Smooth scrolling for tables */
+  .data-table-wrapper {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+    overflow-x: auto;
+    width: 100%;
+  }
+
+  .data-table-wrapper::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .data-table-wrapper::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .data-table-wrapper::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 3px;
+  }
+
+  .data-table-wrapper::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground));
+  }
+
+  /* Mobile table optimizations */
+  @media (max-width: 640px) {
+    .data-table-wrapper {
+      margin-left: -0.75rem;
+      margin-right: -0.75rem;
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
+    }
+  }
+
+  /* Responsive chart containers */
+  .chart-container {
+    @apply w-full;
+    min-height: 250px;
+  }
+
+  @media (min-width: 640px) {
+    .chart-container {
+      min-height: 300px;
+    }
+  }
+
+  /* Mobile-optimized spacing */
+  @media (max-width: 640px) {
+    .space-y-6 > * + * {
+      margin-top: 1rem;
+    }
+  }
+
+  /* Better alignment for mobile cards */
+  @media (max-width: 640px) {
+    .bg-card {
+      @apply rounded-lg;
+    }
+  }
+
+  /* Touch-friendly select and input */
+  @media (max-width: 640px) {
+    select,
+    input[type="text"],
+    input[type="number"],
+    textarea {
+      font-size: 16px; /* Prevents zoom on iOS */
+    }
   }
 }
 

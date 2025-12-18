@@ -82,19 +82,19 @@ const DC = () => {
 
   return (
     <Layout>
-      <div className="space-y-6 animate-fade-in">
+      <div className="space-y-4 sm:space-y-6 animate-fade-in">
         {/* Page Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-3">
-              <Warehouse className="w-7 h-7 text-primary" />
-              {t("pages.dc.title")}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2 sm:gap-3">
+              <Warehouse className="w-5 h-5 sm:w-7 sm:h-7 text-primary shrink-0" />
+              <span className="truncate">{t("pages.dc.title")}</span>
             </h1>
-            <p className="text-muted-foreground">{t("pages.dc.subtitle")}</p>
+            <p className="text-sm sm:text-base text-muted-foreground truncate">{t("pages.dc.subtitle")}</p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <select
-              className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm"
+              className="bg-secondary border border-border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm min-w-[140px]"
               value={selectedDc}
               onChange={(e) => setSelectedDc(e.target.value)}
             >
@@ -107,7 +107,7 @@ const DC = () => {
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <KPICard
             title={t("pages.dc.dcServiceLevel")}
             value={dcKpis?.serviceLevelPct ?? fallbackDcKpis.serviceLevel}
@@ -135,15 +135,15 @@ const DC = () => {
         </div>
 
         {/* Inventory Age Pyramid */}
-        <div className="bg-card rounded-xl border border-border p-6">
-          <h3 className="font-semibold mb-6">{t("pages.dc.inventoryAgeDistribution")}</h3>
-          <div className="h-[300px]">
+        <div className="bg-card rounded-xl border border-border p-4 sm:p-6">
+          <h3 className="font-semibold mb-4 sm:mb-6 text-sm sm:text-base">{t("pages.dc.inventoryAgeDistribution")}</h3>
+          <div className="h-[250px] sm:h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={inventoryAgeData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
                 <XAxis
                   type="number"
-                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 9 }}
                   tickLine={false}
                   axisLine={{ stroke: "hsl(var(--border))" }}
                   tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`}
@@ -151,10 +151,10 @@ const DC = () => {
                 <YAxis
                   type="category"
                   dataKey="bucket"
-                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 9 }}
                   tickLine={false}
                   axisLine={{ stroke: "hsl(var(--border))" }}
-                  width={80}
+                  width={65}
                 />
                 <Tooltip
                   contentStyle={{
@@ -174,33 +174,39 @@ const DC = () => {
           </div>
           
           {/* Summary */}
-          <div className="mt-6 pt-4 border-t border-border grid grid-cols-3 gap-4 text-center">
+          <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-border grid grid-cols-3 gap-2 sm:gap-4 text-center">
             <div>
-              <p className="text-sm text-muted-foreground">Fresh Stock (0-3 days)</p>
-              <p className="text-xl font-semibold text-success">20,700 units</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Fresh Stock (0-3 days)</p>
+              <p className="text-base sm:text-xl font-semibold text-success">20,700 units</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">At Risk (4-5 days)</p>
-              <p className="text-xl font-semibold text-warning">4,500 units</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">At Risk (4-5 days)</p>
+              <p className="text-base sm:text-xl font-semibold text-warning">4,500 units</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Near Expiry (6+ days)</p>
-              <p className="text-xl font-semibold text-destructive">2,250 units</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Near Expiry (6+ days)</p>
+              <p className="text-base sm:text-xl font-semibold text-destructive">2,250 units</p>
             </div>
           </div>
         </div>
 
         {/* DC × SKU Days of Cover Heatmap */}
-        <div className="bg-card rounded-xl border border-border p-6">
-          <h3 className="font-semibold mb-4">Days of Cover by DC & SKU</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+        <div className="bg-card rounded-xl border border-border p-4 sm:p-6">
+          <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">Days of Cover by DC & SKU</h3>
+          <div className="overflow-x-auto -mx-3 sm:mx-0 data-table-wrapper">
+            <table className="w-full text-xs sm:text-sm min-w-full">
               <thead>
                 <tr>
-                  <th className="text-left py-3 px-4 text-muted-foreground font-medium">DC</th>
-                  <th className="text-center py-3 px-4 text-muted-foreground font-medium">SKU-001<br/><span className="text-xs">(Target: 4d)</span></th>
-                  <th className="text-center py-3 px-4 text-muted-foreground font-medium">SKU-002<br/><span className="text-xs">(Target: 4d)</span></th>
-                  <th className="text-center py-3 px-4 text-muted-foreground font-medium">SKU-003<br/><span className="text-xs">(Target: 5d)</span></th>
+                  <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-muted-foreground font-medium">DC</th>
+                  <th className="text-center py-2 sm:py-3 px-2 sm:px-4 text-muted-foreground font-medium whitespace-nowrap">
+                    SKU-001<br/><span className="text-[10px] sm:text-xs">(Target: 4d)</span>
+                  </th>
+                  <th className="text-center py-2 sm:py-3 px-2 sm:px-4 text-muted-foreground font-medium whitespace-nowrap">
+                    SKU-002<br/><span className="text-[10px] sm:text-xs">(Target: 4d)</span>
+                  </th>
+                  <th className="text-center py-2 sm:py-3 px-2 sm:px-4 text-muted-foreground font-medium whitespace-nowrap">
+                    SKU-003<br/><span className="text-[10px] sm:text-xs">(Target: 5d)</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -222,7 +228,7 @@ const DC = () => {
 
                   return (
                     <tr key={dcId} className="border-t border-border">
-                      <td className="py-3 px-4 font-medium">{label}</td>
+                      <td className="py-2 sm:py-3 px-2 sm:px-4 font-medium whitespace-nowrap">{label}</td>
                       {skuTargets.map(({ skuId, target }) => {
                         const row = daysCoverData.find(
                           (r) => r.dcId === dcId && r.skuId === skuId,
@@ -231,7 +237,7 @@ const DC = () => {
 
                         if (cover == null) {
                           return (
-                            <td key={skuId} className="py-3 px-4 text-center text-muted-foreground">
+                            <td key={skuId} className="py-2 sm:py-3 px-2 sm:px-4 text-center text-muted-foreground">
                               —
                             </td>
                           );
@@ -256,9 +262,9 @@ const DC = () => {
                                 : "text-success";
 
                         return (
-                          <td key={skuId} className="py-3 px-4 text-center">
+                          <td key={skuId} className="py-2 sm:py-3 px-2 sm:px-4 text-center">
                             <span
-                              className={`inline-block px-3 py-1 rounded-lg ${bgColor} ${textColor} font-medium`}
+                              className={`inline-block px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg ${bgColor} ${textColor} font-medium text-[10px] sm:text-xs whitespace-nowrap`}
                             >
                               {cover.toFixed(1)}d
                             </span>
@@ -275,12 +281,12 @@ const DC = () => {
 
         {/* Replenishment Recommendations */}
         <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <div className="p-4 border-b border-border">
-            <h3 className="font-semibold">AI Replenishment Recommendations</h3>
-            <p className="text-sm text-muted-foreground">Suggested dispatches to stores</p>
+          <div className="p-3 sm:p-4 border-b border-border">
+            <h3 className="font-semibold text-sm sm:text-base">AI Replenishment Recommendations</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground">Suggested dispatches to stores</p>
           </div>
-          <div className="overflow-x-auto">
-            <table className="data-table">
+          <div className="overflow-x-auto -mx-3 sm:mx-0 data-table-wrapper">
+            <table className="data-table min-w-full">
               <thead>
                 <tr>
                   <th>Store</th>

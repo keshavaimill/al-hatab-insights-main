@@ -27,17 +27,17 @@ export const HeatmapChart = memo(function HeatmapChart() {
   };
 
   return (
-    <div className="bg-card rounded-xl border border-border p-6">
-      <h3 className="font-semibold mb-4">{t("pages.commandCenter.hourStoreClusterForecastError")}</h3>
+    <div className="bg-card rounded-xl border border-border p-4 sm:p-6">
+      <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">{t("pages.commandCenter.hourStoreClusterForecastError")}</h3>
       
-      <div className="overflow-x-auto">
-        <div className="min-w-[600px]">
+      <div className="overflow-x-auto -mx-3 sm:mx-0 scrollbar-hide">
+        <div className="min-w-[500px] sm:min-w-[600px] px-3 sm:px-0">
           {/* Hour labels */}
-          <div className="flex mb-2 ml-24">
+          <div className="flex mb-2 ml-20 sm:ml-24">
             {HOURS.filter((_, i) => i % 4 === 0).map((hour) => (
               <div
                 key={hour}
-                className="text-xs text-muted-foreground"
+                className="text-[10px] sm:text-xs text-muted-foreground"
                 style={{ width: `${100 / 6}%` }}
               >
                 {hour.toString().padStart(2, "0")}:00
@@ -48,14 +48,14 @@ export const HeatmapChart = memo(function HeatmapChart() {
           {/* Heatmap rows */}
           {heatmapData.map((row) => (
             <div key={row.cluster} className="flex items-center mb-1">
-              <div className="w-24 text-sm text-muted-foreground truncate pr-2">
+              <div className="w-20 sm:w-24 text-xs sm:text-sm text-muted-foreground truncate pr-2">
                 {row.cluster}
               </div>
               <div className="flex-1 flex gap-0.5">
                 {row.hours.map((value, i) => (
                   <div
                     key={i}
-                    className="flex-1 h-6 rounded-sm transition-all hover:scale-110 cursor-pointer"
+                    className="flex-1 h-5 sm:h-6 rounded-sm transition-all hover:scale-110 cursor-pointer"
                     style={getHeatColor(value)}
                     title={`${row.cluster} @ ${i.toString().padStart(2, "0")}:00 - Error: ${(value * 10).toFixed(1)}%`}
                   />
@@ -67,9 +67,9 @@ export const HeatmapChart = memo(function HeatmapChart() {
       </div>
 
       {/* Legend */}
-      <div className="mt-4 flex items-center justify-center gap-4 text-xs text-muted-foreground">
+      <div className="mt-3 sm:mt-4 flex flex-wrap items-center justify-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-muted-foreground">
         <span>{t("pages.commandCenter.lowError")}</span>
-        <div className="flex gap-1">
+        <div className="flex gap-0.5 sm:gap-1">
           {[0.2, 0.4, 0.6, 0.8, 1.0].map((opacity) => {
             const hexToRgba = (hex: string, alpha: number) => {
               const r = parseInt(hex.slice(1, 3), 16);
@@ -80,7 +80,7 @@ export const HeatmapChart = memo(function HeatmapChart() {
             return (
               <div
                 key={opacity}
-                className="w-4 h-3 rounded-sm"
+                className="w-3 h-2.5 sm:w-4 sm:h-3 rounded-sm"
                 style={{ backgroundColor: hexToRgba(chartColors.steelBlue, opacity) }}
               />
             );

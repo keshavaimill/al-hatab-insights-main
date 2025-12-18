@@ -92,7 +92,7 @@ export const SaudiMap = memo(function SaudiMap({ onNodeClick }: SaudiMapProps) {
   const mapRef = useRef<L.Map | null>(null);
 
   return (
-    <div className="relative w-full h-[260px] sm:h-[320px] md:h-[360px] lg:h-[400px] xl:h-[420px] rounded-xl overflow-hidden border border-border shadow-lg">
+    <div className="relative w-full h-[240px] sm:h-[300px] md:h-[340px] lg:h-[380px] xl:h-[400px] rounded-xl overflow-hidden border border-border shadow-lg">
       <MapContainer
         center={SAUDI_CENTER}
         zoom={DEFAULT_ZOOM}
@@ -123,25 +123,25 @@ export const SaudiMap = memo(function SaudiMap({ onNodeClick }: SaudiMapProps) {
             }}
           >
             <Popup className="custom-popup">
-              <div className="p-2 min-w-[200px]">
-                <p className="font-semibold text-sm text-foreground mb-1">{node.name}</p>
-                <p className="text-xs text-muted-foreground mb-2">{node.type}</p>
-                <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+              <div className="p-2 sm:p-3 min-w-[180px] sm:min-w-[200px] max-w-[90vw]">
+                <p className="font-semibold text-xs sm:text-sm text-foreground mb-1 truncate">{node.name}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mb-2">{node.type}</p>
+                <div className="flex flex-col gap-1 text-[10px] sm:text-xs text-muted-foreground">
                   <div className="flex justify-between">
                     <span>Service Level:</span>
-                    <span className={`font-medium ${node.serviceLevel >= 95 ? "text-success" : node.serviceLevel >= 90 ? "text-warning" : "text-destructive"}`}>
+                    <span className={`font-medium whitespace-nowrap ${node.serviceLevel >= 95 ? "text-success" : node.serviceLevel >= 90 ? "text-warning" : "text-destructive"}`}>
                       {node.serviceLevel}%
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Waste:</span>
-                    <span className={`font-medium ${node.waste <= 2 ? "text-success" : node.waste <= 4 ? "text-warning" : "text-destructive"}`}>
+                    <span className={`font-medium whitespace-nowrap ${node.waste <= 2 ? "text-success" : node.waste <= 4 ? "text-warning" : "text-destructive"}`}>
                       {node.waste}%
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>MAPE:</span>
-                    <span className={`font-medium ${node.mape <= 5 ? "text-success" : node.mape <= 7 ? "text-warning" : "text-destructive"}`}>
+                    <span className={`font-medium whitespace-nowrap ${node.mape <= 5 ? "text-success" : node.mape <= 7 ? "text-warning" : "text-destructive"}`}>
                       {node.mape}%
                     </span>
                   </div>
@@ -153,19 +153,19 @@ export const SaudiMap = memo(function SaudiMap({ onNodeClick }: SaudiMapProps) {
       </MapContainer>
 
       {/* Legend */}
-      <div className="absolute bottom-4 left-4 bg-card/95 backdrop-blur-sm rounded-lg p-3 text-xs shadow-lg border border-border z-[1000]">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5">
-            <div className="status-dot status-good" />
-            <span className="text-muted-foreground">Good</span>
+      <div className="absolute bottom-2 left-2 sm:bottom-4 sm:left-4 bg-card/95 backdrop-blur-sm rounded-lg p-2 sm:p-3 text-[10px] sm:text-xs shadow-lg border border-border z-[1000]">
+        <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+          <div className="flex items-center gap-1 sm:gap-1.5">
+            <div className="status-dot status-good shrink-0" />
+            <span className="text-muted-foreground whitespace-nowrap">Good</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="status-dot status-warning" />
-            <span className="text-muted-foreground">At Risk</span>
+          <div className="flex items-center gap-1 sm:gap-1.5">
+            <div className="status-dot status-warning shrink-0" />
+            <span className="text-muted-foreground whitespace-nowrap">At Risk</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="status-dot status-danger" />
-            <span className="text-muted-foreground">Critical</span>
+          <div className="flex items-center gap-1 sm:gap-1.5">
+            <div className="status-dot status-danger shrink-0" />
+            <span className="text-muted-foreground whitespace-nowrap">Critical</span>
           </div>
         </div>
       </div>

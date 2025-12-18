@@ -7,7 +7,7 @@ export const FloatingBot = () => {
   return (
     <>
       {/* Floating Button */}
-      <div className="fixed bottom-6 right-6 z-40" style={{ width: '56px', height: '56px' }}>
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40" style={{ width: '48px', height: '48px' }}>
         {/* Ripple Effects */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ width: '120px', height: '120px', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
           <div className="ripple-1 absolute rounded-full border-2 border-primary/30"></div>
@@ -17,14 +17,14 @@ export const FloatingBot = () => {
         
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="relative w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 flex items-center justify-center group overflow-hidden"
+          className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 flex items-center justify-center group overflow-hidden touch-manipulation"
           aria-label="Open AI Gennie chat"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-primary/80 to-accent/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <img
             src="/image.png"
             alt="AI Gennie"
-            className="relative z-10 w-10 h-10 rounded-full object-cover object-center group-hover:scale-105 transition-transform duration-300 select-none"
+            className="relative z-10 w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover object-center group-hover:scale-105 transition-transform duration-300 select-none"
             style={{ 
               imageRendering: 'auto',
               willChange: 'transform'

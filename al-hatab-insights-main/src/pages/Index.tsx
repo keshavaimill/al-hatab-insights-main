@@ -93,17 +93,17 @@ const Index = () => {
 
   return (
     <Layout>
-      <div className="space-y-6 animate-fade-in">
+      <div className="space-y-4 sm:space-y-6 animate-fade-in w-full">
         {/* Page Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">{t("pages.commandCenter.title")}</h1>
-            <p className="text-muted-foreground">{t("pages.commandCenter.subtitle")}</p>
+        <div className="flex items-start sm:items-center justify-between gap-2 sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-2xl font-bold">{t("pages.commandCenter.title")}</h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">{t("pages.commandCenter.subtitle")}</p>
           </div>
         </div>
 
         {/* KPI Strip */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 items-stretch">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 items-stretch w-full">
           <KPICard
             title={t("pages.commandCenter.forecastAccuracy")}
             value={kpiData.forecastAccuracy.value}
@@ -161,21 +161,27 @@ const Index = () => {
         </div>
 
         {/* Map & Node Health */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-card rounded-xl border border-border p-6">
-            <h3 className="font-semibold mb-4">{t("pages.commandCenter.saudiArabiaNetwork")}</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 w-full">
+          <div className="bg-card rounded-xl border border-border p-4 sm:p-6 w-full min-w-0">
+            <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">{t("pages.commandCenter.saudiArabiaNetwork")}</h3>
             <SaudiMap />
           </div>
+          <div className="w-full min-w-0">
           <NodeHealthTable />
+          </div>
         </div>
 
         {/* Funnel Chart */}
         <FunnelChart />
 
         {/* Time Series Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 w-full">
+          <div className="w-full min-w-0">
           <DemandForecastChart />
+          </div>
+          <div className="w-full min-w-0">
           <HeatmapChart />
+          </div>
         </div>
       </div>
     </Layout>
