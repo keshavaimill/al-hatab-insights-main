@@ -383,15 +383,48 @@
   }
 
   .leaflet-popup-content-wrapper {
-    @apply bg-card border border-border rounded-lg shadow-lg;
+    @apply bg-card border-2 border-border rounded-lg shadow-xl;
+    padding: 0 !important;
+    background: hsl(var(--card)) !important;
   }
 
   .leaflet-popup-content {
     @apply m-0;
+    margin: 0 !important;
   }
 
   .leaflet-popup-tip {
-    @apply bg-card border-l border-b border-border;
+    @apply bg-card border-l-2 border-b-2 border-border;
+    background: hsl(var(--card)) !important;
+  }
+  
+  /* Custom popup styling */
+  .custom-popup .leaflet-popup-content-wrapper {
+    @apply bg-card border-2 border-border rounded-lg shadow-xl;
+    background: hsl(var(--card)) !important;
+    padding: 0 !important;
+  }
+  
+  .custom-popup .leaflet-popup-content {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* Popup close button styling */
+  .leaflet-popup-close-button {
+    @apply text-foreground hover:text-destructive;
+    font-size: 20px !important;
+    font-weight: bold !important;
+    padding: 8px !important;
+    width: 28px !important;
+    height: 28px !important;
+    line-height: 1 !important;
+    border-radius: 4px !important;
+    transition: all 0.2s ease !important;
+  }
+  
+  .leaflet-popup-close-button:hover {
+    @apply bg-destructive/10;
   }
 
   .leaflet-control-zoom {
@@ -419,6 +452,77 @@
   .custom-status-marker {
     background: transparent !important;
     border: none !important;
+  }
+  
+  /* Ensure custom markers are visible and circular */
+  .leaflet-marker-icon.custom-status-marker {
+    background: transparent !important;
+    border: none !important;
+    width: 16px !important;
+    height: 16px !important;
+  }
+  
+  /* Make sure marker divs are visible and perfectly circular */
+  .leaflet-div-icon.custom-status-marker {
+    background: transparent !important;
+    border: none !important;
+    width: 16px !important;
+    height: 16px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  .leaflet-div-icon.custom-status-marker .map-marker-pin {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+    min-height: 16px !important;
+    max-width: 16px !important;
+    max-height: 16px !important;
+    border-radius: 50% !important;
+    aspect-ratio: 1 / 1 !important;
+    box-sizing: border-box !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+  }
+  
+  /* Prevent any stretching or distortion */
+  .leaflet-div-icon.custom-status-marker img {
+    display: none !important;
+  }
+  
+  /* Hover effect for markers - maintain circular shape */
+  .leaflet-div-icon.custom-status-marker:hover .map-marker-pin {
+    transform: translate(-50%, -50%) scale(1.5) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.8), 0 0 0 3px rgba(0,0,0,0.15);
+    z-index: 2000;
+  }
+  
+  /* Active/clicked marker state - maintain circular shape */
+  .leaflet-div-icon.custom-status-marker.active .map-marker-pin {
+    transform: translate(-50%, -50%) scale(1.6) !important;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.9), 0 0 0 4px rgba(0,0,0,0.2);
+    z-index: 2000;
+  }
+  
+  /* Ensure markers have proper z-index */
+  .leaflet-marker-pane {
+    z-index: 600 !important;
+  }
+  
+  /* Ensure marker pane is above tile layer */
+  .leaflet-pane {
+    z-index: 400;
+  }
+  
+  .leaflet-marker-pane {
+    z-index: 600;
   }
 
   /* Ensure map fits within container */

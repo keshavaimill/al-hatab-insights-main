@@ -47,18 +47,36 @@ const createStatusIcon = (status: string) => {
     }
   };
 
+  const color = getStatusColor(status);
   return L.divIcon({
     className: "custom-status-marker",
-    html: `<div style="
-      width: 12px;
-      height: 12px;
-      background-color: ${getStatusColor(status)};
-      border: 2px solid white;
+    html: `<div class="map-marker-pin" style="
+      width: 16px;
+      height: 16px;
+      min-width: 16px;
+      min-height: 16px;
+      max-width: 16px;
+      max-height: 16px;
+      background-color: ${color};
+      border: 3px solid white;
       border-radius: 50%;
-      box-shadow: 0 0 8px rgba(0,0,0,0.3);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.6), 0 0 0 2px ${color}40;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1000;
+      display: block;
+      visibility: visible;
+      opacity: 1;
+      box-sizing: border-box;
+      aspect-ratio: 1 / 1;
     "></div>`,
-    iconSize: [12, 12],
-    iconAnchor: [6, 6],
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
+    popupAnchor: [0, -8],
   });
 };
 
@@ -88,6 +106,20 @@ const getStatusClass = (status: string) => {
 const SAUDI_CENTER: [number, number] = [23.8859, 45.0792];
 const DEFAULT_ZOOM = 6;
 
+// Component to initialize map and ensure markers are visible
+const MapInitializer = () => {
+  const map = useMap();
+  
+  useEffect(() => {
+    // Invalidate size to ensure proper rendering
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
+  }, [map]);
+  
+  return null;
+};
+
 export const SaudiMap = memo(function SaudiMap({ onNodeClick }: SaudiMapProps) {
   const mapRef = useRef<L.Map | null>(null);
 
@@ -96,7 +128,7 @@ export const SaudiMap = memo(function SaudiMap({ onNodeClick }: SaudiMapProps) {
       <MapContainer
         center={SAUDI_CENTER}
         zoom={DEFAULT_ZOOM}
-        style={{ height: "100%", width: "100%", zIndex: 0 }}
+        style={{ height: "100%", width: "100%", zIndex: 1 }}
         zoomControl={true}
         scrollWheelZoom={true}
         className="rounded-xl"
@@ -111,6 +143,7 @@ export const SaudiMap = memo(function SaudiMap({ onNodeClick }: SaudiMapProps) {
         />
 
         <MapController center={SAUDI_CENTER} />
+        <MapInitializer />
 
         {/* Node markers */}
         {nodes.map((node) => (
@@ -122,26 +155,28 @@ export const SaudiMap = memo(function SaudiMap({ onNodeClick }: SaudiMapProps) {
               click: () => onNodeClick?.(node),
             }}
           >
-            <Popup className="custom-popup">
-              <div className="p-2 sm:p-3 min-w-[180px] sm:min-w-[200px] max-w-[90vw]">
-                <p className="font-semibold text-xs sm:text-sm text-foreground mb-1 truncate">{node.name}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground mb-2">{node.type}</p>
-                <div className="flex flex-col gap-1 text-[10px] sm:text-xs text-muted-foreground">
-                  <div className="flex justify-between">
-                    <span>Service Level:</span>
-                    <span className={`font-medium whitespace-nowrap ${node.serviceLevel >= 95 ? "text-success" : node.serviceLevel >= 90 ? "text-warning" : "text-destructive"}`}>
+            <Popup className="custom-popup" closeButton={true}>
+              <div className="p-3 sm:p-4 min-w-[200px] sm:min-w-[220px] max-w-[90vw] bg-card rounded-lg">
+                <div className="mb-3 pb-2 border-b border-border">
+                  <p className="font-bold text-sm sm:text-base text-foreground mb-1 truncate">{node.name}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground font-medium">{node.type}</p>
+                </div>
+                <div className="flex flex-col gap-2 text-xs sm:text-sm">
+                  <div className="flex justify-between items-center px-3 py-2 bg-muted/50 rounded-md border border-border/50">
+                    <span className="text-muted-foreground font-medium">Service Level:</span>
+                    <span className={`font-bold whitespace-nowrap ${node.serviceLevel >= 95 ? "text-success" : node.serviceLevel >= 90 ? "text-warning" : "text-destructive"}`}>
                       {node.serviceLevel}%
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Waste:</span>
-                    <span className={`font-medium whitespace-nowrap ${node.waste <= 2 ? "text-success" : node.waste <= 4 ? "text-warning" : "text-destructive"}`}>
+                  <div className="flex justify-between items-center px-3 py-2 bg-muted/50 rounded-md border border-border/50">
+                    <span className="text-muted-foreground font-medium">Waste:</span>
+                    <span className={`font-bold whitespace-nowrap ${node.waste <= 2 ? "text-success" : node.waste <= 4 ? "text-warning" : "text-destructive"}`}>
                       {node.waste}%
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>MAPE:</span>
-                    <span className={`font-medium whitespace-nowrap ${node.mape <= 5 ? "text-success" : node.mape <= 7 ? "text-warning" : "text-destructive"}`}>
+                  <div className="flex justify-between items-center px-3 py-2 bg-muted/50 rounded-md border border-border/50">
+                    <span className="text-muted-foreground font-medium">MAPE:</span>
+                    <span className={`font-bold whitespace-nowrap ${node.mape <= 5 ? "text-success" : node.mape <= 7 ? "text-warning" : "text-destructive"}`}>
                       {node.mape}%
                     </span>
                   </div>
