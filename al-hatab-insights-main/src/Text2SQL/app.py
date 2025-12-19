@@ -260,6 +260,18 @@ def store_kpis():
     return jsonify(result)
 
 
+@app.route("/store-shelf-performance", methods=["GET"])
+def store_shelf_performance():
+    """
+    Get shelf performance data (SKU-level) for a specific store.
+    
+    All business logic is in the data layer - this endpoint is purely presentational.
+    """
+    store_id = request.args.get("store_id", "ST_DUBAI_HYPER_01")
+    results = StoreKPIService.get_store_shelf_performance(store_id=store_id)
+    return jsonify(results)
+
+
 # ---------------------------------------------
 # DC KPIs endpoint (Distribution Center)
 # Now uses the global intermediate dataframe layer

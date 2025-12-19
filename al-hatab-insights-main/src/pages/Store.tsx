@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { KPICard } from "@/components/dashboard/KPICard";
-import { storeHourlySales, stockoutTimeline, shelfPerformance, storeActions, storeKPIs as fallbackStoreKPIs } from "@/lib/mockData";
+import { storeHourlySales, stockoutTimeline, shelfPerformance as fallbackShelfPerformance, storeActions, storeKPIs as fallbackStoreKPIs } from "@/lib/mockData";
 import { Store as StoreIcon, Package, AlertTriangle, DollarSign, TrendingUp, Lightbulb } from "lucide-react";
 import {
   LineChart,
@@ -16,12 +16,15 @@ import {
 } from "recharts";
 import { useTranslation } from "react-i18next";
 import { fetchStoreKpis, type StoreKpisResponse } from "@/api/storeKpis";
+import { fetchStoreShelfPerformance, type ShelfPerformanceItem } from "@/api/storeShelfPerformance";
 
 const Store = () => {
   const { t } = useTranslation();
   const [selectedStore, setSelectedStore] = useState("ST_DUBAI_HYPER_01");
   const [storeKpis, setStoreKpis] = useState<StoreKpisResponse | null>(null);
   const [isKpiLoading, setIsKpiLoading] = useState(false);
+  const [shelfPerformance, setShelfPerformance] = useState<ShelfPerformanceItem[]>(fallbackShelfPerformance);
+  const [isShelfLoading, setIsShelfLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,7 +53,27 @@ const Store = () => {
       }
     };
 
+    const loadShelfPerformance = async () => {
+      setIsShelfLoading(true);
+      try {
+        const data = await fetchStoreShelfPerformance(selectedStore);
+        if (!cancelled) {
+          setShelfPerformance(data);
+        }
+      } catch (error) {
+        console.error("Failed to load shelf performance from backend, using fallback mock data.", error);
+        if (!cancelled) {
+          setShelfPerformance(fallbackShelfPerformance);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsShelfLoading(false);
+        }
+      }
+    };
+
     loadKpis();
+    loadShelfPerformance();
     return () => {
       cancelled = true;
     };
@@ -238,23 +261,32 @@ const Store = () => {
         {/* Shelf Performance Table */}
         <div className="bg-card rounded-xl border border-border overflow-hidden">
           <div className="p-3 sm:p-4 border-b border-border">
-            <h3 className="font-semibold text-sm sm:text-base">Shelf Performance</h3>
+            <h3 className="font-semibold text-sm sm:text-base">{t("pages.store.shelfPerformance")}</h3>
           </div>
           <div className="overflow-x-auto -mx-3 sm:mx-0 data-table-wrapper">
-            <table className="data-table min-w-full">
-              <thead>
-                <tr>
-                  <th>SKU</th>
-                  <th>Product Name</th>
-                  <th>Planogram Cap</th>
-                  <th>On-Shelf</th>
-                  <th>% Filled</th>
-                  <th>Sales/Hour</th>
-                  <th>Waste (7d)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {shelfPerformance.map((item) => (
+            {isShelfLoading ? (
+              <div className="p-8 text-center text-muted-foreground">
+                <p className="text-sm">Loading shelf performance data...</p>
+              </div>
+            ) : shelfPerformance.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground">
+                <p className="text-sm">No shelf performance data available for this store.</p>
+              </div>
+            ) : (
+              <table className="data-table min-w-full">
+                <thead>
+                  <tr>
+                    <th>{t("pages.store.sku")}</th>
+                    <th>Product Name</th>
+                    <th>Planogram Cap</th>
+                    <th>On-Shelf</th>
+                    <th>% Filled</th>
+                    <th>Sales/Hour</th>
+                    <th>Waste (7d)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shelfPerformance.map((item) => (
                   <tr key={item.sku}>
                     <td className="font-mono text-sm">{item.sku}</td>
                     <td className="font-medium">{item.name}</td>
@@ -276,9 +308,10 @@ const Store = () => {
                       {item.wasteLast7}
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 

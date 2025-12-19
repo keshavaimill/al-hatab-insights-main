@@ -134,7 +134,7 @@ export const TopBar = ({ onMenuClick }: TopBarProps) => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="1d">{t("common.last24h")}</SelectItem>
-                      <SelectItem value="7d">{t("common.last7days")}</SelectItem>
+                      <SelectItem value="7d">{t("common.last7days")} ({t("common.recommended")})</SelectItem>
                       <SelectItem value="30d">{t("common.last30days")}</SelectItem>
                       <SelectItem value="90d">{t("common.last90days")}</SelectItem>
                     </SelectContent>
@@ -147,7 +147,7 @@ export const TopBar = ({ onMenuClick }: TopBarProps) => {
                     <SelectContent>
                       <SelectItem value="retail">{t("common.retail")}</SelectItem>
                       <SelectItem value="wholesale">{t("common.wholesale")}</SelectItem>
-                      <SelectItem value="both">{t("common.both")}</SelectItem>
+                      <SelectItem value="both">{t("common.both")} ({t("common.recommended")})</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -161,7 +161,7 @@ export const TopBar = ({ onMenuClick }: TopBarProps) => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="1d">{t("common.last24h")}</SelectItem>
-                  <SelectItem value="7d">{t("common.last7days")}</SelectItem>
+                  <SelectItem value="7d">{t("common.last7days")} ({t("common.recommended")})</SelectItem>
                   <SelectItem value="30d">{t("common.last30days")}</SelectItem>
                   <SelectItem value="90d">{t("common.last90days")}</SelectItem>
                 </SelectContent>
@@ -174,7 +174,7 @@ export const TopBar = ({ onMenuClick }: TopBarProps) => {
                 <SelectContent>
                   <SelectItem value="retail">{t("common.retail")}</SelectItem>
                   <SelectItem value="wholesale">{t("common.wholesale")}</SelectItem>
-                  <SelectItem value="both">{t("common.both")}</SelectItem>
+                  <SelectItem value="both">{t("common.both")} ({t("common.recommended")})</SelectItem>
                 </SelectContent>
               </Select>
 

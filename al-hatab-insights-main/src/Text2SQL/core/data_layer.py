@@ -732,7 +732,7 @@ class GlobalDataLayer:
         df = self.get_dataframe()
         
         store_cols = ["store_id", "sku_id", "on_shelf_availability_pct", "stockout_incidents", 
-                     "waste_units", "waste_sar", "kpi_level"]
+                     "waste_units", "waste_sar", "on_shelf_units", "planogram_capacity_units", "kpi_level"]
         available_cols = [col for col in store_cols if col in df.columns]
         
         if not available_cols:

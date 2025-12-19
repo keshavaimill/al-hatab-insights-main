@@ -169,6 +169,117 @@ class StoreKPIService:
         }
         
         return result
+    
+    @staticmethod
+    def get_store_shelf_performance(store_id: Optional[str] = None) -> List[Dict]:
+        """
+        Get shelf performance data for a specific store (SKU-level).
+        
+        Returns:
+            List of dictionaries with:
+            {
+                "sku": str,
+                "name": str,  # Will be derived from SKU ID
+                "planogramCap": int,
+                "onShelf": int,
+                "shelfFill": float,  # Percentage
+                "salesPerHour": float,
+                "wasteLast7": float  # Waste percentage over 7 days
+            }
+        """
+        # Get store-SKU level KPIs - we need store_sku level data
+        # Get the full dataframe and filter manually to get store_sku level
+        full_df = global_data_layer.get_dataframe()
+        
+        if full_df.empty:
+            return []
+        
+        # Filter to store_sku level for the specific store
+        store_cols = ["store_id", "sku_id", "on_shelf_availability_pct", "stockout_incidents", 
+                     "waste_units", "waste_sar", "on_shelf_units", "planogram_capacity_units", "kpi_level"]
+        available_cols = [col for col in store_cols if col in full_df.columns]
+        
+        if not available_cols:
+            return []
+        
+        sku_df = full_df[available_cols].copy()
+        sku_df = sku_df.dropna(subset=["store_id"])
+        
+        # Filter by store_id and store_sku level
+        if store_id:
+            sku_df = sku_df[
+                (sku_df["store_id"] == store_id) & 
+                (sku_df["kpi_level"] == "store_sku")
+            ]
+        
+        if sku_df.empty:
+            return []
+        
+        # Get raw data for additional calculations (sales/hour, waste over 7 days)
+        # Access raw dataframes from global_data_layer
+        raw_dfs = global_data_layer._raw_dataframes if hasattr(global_data_layer, '_raw_dataframes') else {}
+        
+        results = []
+        for _, row in sku_df.iterrows():
+            sku_id = str(row["sku_id"])
+            planogram_cap = int(row.get("planogram_capacity_units", 0)) if "planogram_capacity_units" in row.index and pd.notna(row.get("planogram_capacity_units")) else 0
+            on_shelf = int(row.get("on_shelf_units", 0)) if "on_shelf_units" in row.index and pd.notna(row.get("on_shelf_units")) else 0
+            shelf_fill = float(row.get("on_shelf_availability_pct", 0.0)) if pd.notna(row.get("on_shelf_availability_pct")) else 0.0
+            waste_units = int(row.get("waste_units", 0)) if "waste_units" in row.index and pd.notna(row.get("waste_units")) else 0
+            
+            # Calculate sales per hour from predicted_demand (average hourly demand)
+            sales_per_hour = 0.0
+            waste_last_7 = 0.0
+            
+            if "store_forecasts" in raw_dfs and store_id:
+                store_raw = raw_dfs["store_forecasts"]
+                if not store_raw.empty:
+                    sku_data = store_raw[
+                        (store_raw["store_id"] == store_id) & 
+                        (store_raw["sku_id"] == sku_id)
+                    ]
+                    
+                    # Filter to forecast_hour_offset = 1 if column exists
+                    if "forecast_hour_offset" in sku_data.columns:
+                        sku_data = sku_data[sku_data["forecast_hour_offset"] == 1]
+                    
+                    if not sku_data.empty and "predicted_demand" in sku_data.columns:
+                        # Sales per hour = average predicted_demand
+                        sales_per_hour = float(sku_data["predicted_demand"].mean())
+                        
+                        # Waste (7d) = waste_units / predicted_demand * 100 (for last 7 days)
+                        # Filter to last 7 days if timestamp available
+                        if "timestamp" in sku_data.columns:
+                            sku_data["timestamp"] = pd.to_datetime(sku_data["timestamp"])
+                            seven_days_ago = sku_data["timestamp"].max() - pd.Timedelta(days=7)
+                            sku_data_7d = sku_data[sku_data["timestamp"] >= seven_days_ago]
+                        else:
+                            sku_data_7d = sku_data
+                        
+                        if not sku_data_7d.empty:
+                            if "waste_units" in sku_data_7d.columns:
+                                total_waste = sku_data_7d["waste_units"].sum()
+                                total_demand = sku_data_7d["predicted_demand"].sum()
+                                if total_demand > 0:
+                                    waste_last_7 = (total_waste / total_demand) * 100
+            
+            # Derive product name from SKU ID (format: SKU_101 -> "Product SKU_101")
+            product_name = sku_id.replace("_", " ").replace("SKU", "Product").title()
+            
+            results.append({
+                "sku": sku_id,
+                "name": product_name,
+                "planogramCap": planogram_cap,
+                "onShelf": on_shelf,
+                "shelfFill": round(shelf_fill, 1),
+                "salesPerHour": round(sales_per_hour, 1),
+                "wasteLast7": round(waste_last_7, 1),
+            })
+        
+        # Sort by SKU for consistent ordering
+        results.sort(key=lambda x: x["sku"])
+        
+        return results
 
 
 class NodeHealthService:
