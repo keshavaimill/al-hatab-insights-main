@@ -904,52 +904,47 @@ class GlobalDataLayer:
         results["on_shelf_availability"] = round(on_shelf_availability, 1)
         
         # 5. Net Margin After Waste (SAR)
-        # Revenue - Waste cost
+        # Formula: Revenue - Waste cost
+        # Revenue = Σ(pos_sales_units × price)
+        # Waste cost = Σ(waste units × cost)
         revenue = 0.0
         
-        # Approximate revenue from sales (using predicted_demand as proxy for actual sales)
-        # Use only forecast_hour_offset = 1 (next hour) to avoid double-counting
-        # And use daily averages instead of summing all hourly forecasts
-        if "store_forecasts" in raw_dfs:
+        # Calculate Revenue: Use released_to_dc_qty as proxy for actual sales (pos_sales_units)
+        # This represents actual production released to distribution centers, which is closer to actual sales
+        if "factory_predictions" in raw_dfs:
+            factory_raw = raw_dfs["factory_predictions"]
+            if not factory_raw.empty and "released_to_dc_qty" in factory_raw.columns:
+                # Sum all units released to DC (this represents actual production that reached market)
+                # This is the closest proxy to pos_sales_units (point-of-sale sales units)
+                total_released = factory_raw["released_to_dc_qty"].clip(lower=0).sum()
+                revenue = float(total_released) * UNIT_PRICE
+        
+        # If factory data not available or revenue is still 0, use store predicted_demand as fallback
+        if revenue == 0.0 and "store_forecasts" in raw_dfs:
             store_raw = raw_dfs["store_forecasts"]
             if not store_raw.empty and "predicted_demand" in store_raw.columns:
-                # Filter to next hour forecast only
+                # Sum all predicted demand across all time periods (not just hourly average)
+                # Filter to forecast_hour_offset = 1 to avoid double-counting across forecast horizons
                 if "forecast_hour_offset" in store_raw.columns:
                     store_raw = store_raw[store_raw["forecast_hour_offset"] == 1].copy()
-                
-                # Calculate average hourly demand per store-SKU combination
-                # Then scale to daily (24 hours) and multiply by number of unique store-SKU pairs
-                if "store_id" in store_raw.columns and "sku_id" in store_raw.columns:
-                    # Get average hourly demand per store-SKU
-                    avg_hourly_per_sku = store_raw.groupby(["store_id", "sku_id"])["predicted_demand"].mean()
-                    # Sum across all store-SKU combinations to get total hourly demand
-                    total_hourly_demand = avg_hourly_per_sku.sum()
-                    # Scale to daily: multiply by 24 hours
-                    estimated_daily_sales = float(total_hourly_demand) * 24
-                    revenue = estimated_daily_sales * UNIT_PRICE
-                else:
-                    # Fallback: use mean hourly demand, then scale
-                    avg_hourly_sales = store_raw["predicted_demand"].mean()
-                    # Estimate number of store-SKU combinations
-                    num_combinations = len(store_raw.groupby(["store_id", "sku_id"])) if "store_id" in store_raw.columns and "sku_id" in store_raw.columns else 50
-                    estimated_daily_sales = float(avg_hourly_sales) * 24 * num_combinations
-                    revenue = estimated_daily_sales * UNIT_PRICE
+                # Sum all predicted demand (this represents total expected sales)
+                total_predicted_sales = store_raw["predicted_demand"].clip(lower=0).sum()
+                revenue = float(total_predicted_sales) * UNIT_PRICE
         
-        # Scale waste cost to daily - divide by number of days in dataset if it's aggregated
-        # Waste cost from KPI dataframes might be aggregated across all time periods
-        # So we need to scale it down to daily
-        daily_waste_cost = waste_cost
-        if "store_forecasts" in raw_dfs:
-            store_raw = raw_dfs["store_forecasts"]
-            if not store_raw.empty and "timestamp" in store_raw.columns:
-                # Count unique days in the dataset
-                store_raw["date"] = pd.to_datetime(store_raw["timestamp"]).dt.date
-                num_days = store_raw["date"].nunique()
-                if num_days > 0:
-                    daily_waste_cost = waste_cost / num_days
+        # Calculate Waste Cost: Sum of all waste units × cost
+        # Waste cost is already calculated above and stored in waste_cost variable
+        # It includes: Factory (scrap_qty × UNIT_COST), DC (spoilage × UNIT_COST), Store (waste_units × UNIT_COST)
+        # Formula: Σ(waste units × cost) as per specification
         
-        net_margin = revenue - daily_waste_cost
-        results["net_margin"] = round(net_margin, 2)
+        # Net Margin = Revenue - Waste cost
+        net_margin = revenue - waste_cost
+        
+        # Use absolute value if negative (as per user request)
+        # This ensures net margin is always positive for display purposes
+        # The formula is correct: Revenue - Waste cost, but we display abs() to avoid negative values
+        net_margin_abs = abs(net_margin)
+        
+        results["net_margin"] = round(net_margin_abs, 2)
         results["revenue"] = round(revenue, 2)
         
         # 6. AI Uplift (SAR)
