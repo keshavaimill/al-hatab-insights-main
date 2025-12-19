@@ -273,6 +273,21 @@ def store_shelf_performance():
 
 
 # ---------------------------------------------
+# DC Inventory Age Distribution endpoint
+# ---------------------------------------------
+@app.route("/dc-inventory-age", methods=["GET"])
+def dc_inventory_age():
+    """
+    Get inventory age distribution for a specific DC.
+    
+    All business logic is in the data layer - this endpoint is purely presentational.
+    """
+    dc_id = request.args.get("dc_id")
+    results = DCKPIService.get_dc_inventory_age_distribution(dc_id=dc_id)
+    return jsonify(results)
+
+
+# ---------------------------------------------
 # DC KPIs endpoint (Distribution Center)
 # Now uses the global intermediate dataframe layer
 # ---------------------------------------------

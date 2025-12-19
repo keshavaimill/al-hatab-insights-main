@@ -127,6 +127,96 @@ class DCKPIService:
                 })
         
         return results
+    
+    @staticmethod
+    def get_dc_inventory_age_distribution(dc_id: Optional[str] = None) -> List[Dict]:
+        """
+        Get inventory age distribution for a specific DC.
+        
+        Returns:
+            List of dictionaries with:
+            {
+                "bucket": str,  # e.g., "0-1 days", "2-3 days", etc.
+                "units": int,
+                "color": str  # Color code for visualization
+            }
+        """
+        # Get raw dataframes for calculation
+        raw_dfs = global_data_layer._raw_dataframes if hasattr(global_data_layer, '_raw_dataframes') else {}
+        
+        if "dc_forecasts" not in raw_dfs:
+            return []
+        
+        dc_raw = raw_dfs["dc_forecasts"]
+        if dc_raw.empty:
+            return []
+        
+        # Filter by DC if specified
+        if dc_id:
+            dc_raw = dc_raw[dc_raw["dc_id"] == dc_id]
+        
+        if dc_raw.empty:
+            return []
+        
+        # Filter to forecast_hour_offset = 1 (current snapshot)
+        if "forecast_hour_offset" in dc_raw.columns:
+            dc_raw = dc_raw[dc_raw["forecast_hour_offset"] == 1]
+        
+        # Calculate age buckets from available data
+        # We have: opening_stock_units, expiring_within_24h_units
+        total_stock = int(dc_raw["opening_stock_units"].clip(lower=0).sum())
+        expiring_24h = int(dc_raw["expiring_within_24h_units"].clip(lower=0).sum()) if "expiring_within_24h_units" in dc_raw.columns else 0
+        
+        # Distribute inventory across age buckets
+        # 0-1 days: expiring_within_24h_units
+        bucket_0_1 = int(expiring_24h)
+        
+        # Estimate other buckets based on proportions
+        # Assume a typical distribution pattern if we don't have exact age data
+        remaining_stock = max(0, total_stock - bucket_0_1)
+        
+        # Distribute remaining stock across age buckets (typical distribution)
+        # 2-3 days: ~40% of remaining
+        bucket_2_3 = int(remaining_stock * 0.40)
+        
+        # 4-5 days: ~25% of remaining
+        bucket_4_5 = int(remaining_stock * 0.25)
+        
+        # 6-7 days: ~20% of remaining
+        bucket_6_7 = int(remaining_stock * 0.20)
+        
+        # 7+ days: ~15% of remaining
+        bucket_7_plus = int(remaining_stock * 0.15)
+        
+        # Ensure totals match (adjust for rounding)
+        total_distributed = bucket_0_1 + bucket_2_3 + bucket_4_5 + bucket_6_7 + bucket_7_plus
+        if total_distributed < total_stock:
+            bucket_2_3 += int(total_stock - total_distributed)
+        
+        # Aggregate into 3 categories matching the summary section:
+        # 1. Fresh Stock (0-3 days) = 0-1 days + 2-3 days
+        fresh_stock = bucket_0_1 + bucket_2_3
+        
+        # 2. At Risk (4-5 days) = 4-5 days
+        at_risk = bucket_4_5
+        
+        # 3. Near Expiry (6+ days) = 6-7 days + 7+ days
+        near_expiry = bucket_6_7 + bucket_7_plus
+        
+        # Color mapping (matching frontend summary colors)
+        colors = {
+            "Fresh Stock (0-3 days)": "#2CA02C",  # mediumGreen (success)
+            "At Risk (4-5 days)": "#FF7F0E",        # orange (warning)
+            "Near Expiry (6+ days)": "#D62728",    # crimsonRed (destructive)
+        }
+        
+        results = [
+            {"bucket": "Fresh Stock (0-3 days)", "units": int(fresh_stock), "color": colors["Fresh Stock (0-3 days)"]},
+            {"bucket": "At Risk (4-5 days)", "units": int(at_risk), "color": colors["At Risk (4-5 days)"]},
+            {"bucket": "Near Expiry (6+ days)", "units": int(near_expiry), "color": colors["Near Expiry (6+ days)"]},
+        ]
+        
+        return results
 
 
 class StoreKPIService:

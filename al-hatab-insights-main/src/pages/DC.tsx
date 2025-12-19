@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { KPICard } from "@/components/dashboard/KPICard";
-import { dcKPIs as fallbackDcKpis, inventoryAgeData, replenishmentRecs } from "@/lib/mockData";
+import { dcKPIs as fallbackDcKpis, inventoryAgeData as fallbackInventoryAgeData, replenishmentRecs } from "@/lib/mockData";
 import { useTranslation } from "react-i18next";
 import { Warehouse, TrendingUp, Clock, AlertTriangle, Package } from "lucide-react";
 import {
@@ -16,6 +16,7 @@ import {
 } from "recharts";
 import { fetchDcKpis, type DcKpisResponse } from "@/api/dcKpis";
 import { fetchDcDaysCover, type DcDaysCoverRow } from "@/api/dcDaysCover";
+import { fetchDcInventoryAge, type InventoryAgeBucket } from "@/api/dcInventoryAge";
 
 const DC = () => {
   const { t } = useTranslation();
@@ -23,6 +24,8 @@ const DC = () => {
   const [dcKpis, setDcKpis] = useState<DcKpisResponse | null>(null);
   const [isKpiLoading, setIsKpiLoading] = useState(false);
   const [daysCoverData, setDaysCoverData] = useState<DcDaysCoverRow[]>([]);
+  const [inventoryAgeData, setInventoryAgeData] = useState<InventoryAgeBucket[]>(fallbackInventoryAgeData);
+  const [isInventoryAgeLoading, setIsInventoryAgeLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,12 +76,32 @@ const DC = () => {
       }
     };
 
+    const loadInventoryAge = async () => {
+      setIsInventoryAgeLoading(true);
+      try {
+        const data = await fetchDcInventoryAge(selectedDc);
+        if (!cancelled) {
+          setInventoryAgeData(data);
+        }
+      } catch (error) {
+        console.error("Failed to load inventory age distribution from backend, using fallback mock data.", error);
+        if (!cancelled) {
+          setInventoryAgeData(fallbackInventoryAgeData);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsInventoryAgeLoading(false);
+        }
+      }
+    };
+
     loadDaysCover();
+    loadInventoryAge();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [selectedDc]);
 
   return (
     <Layout>
@@ -177,15 +200,24 @@ const DC = () => {
           <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-border grid grid-cols-3 gap-2 sm:gap-4 text-center">
             <div>
               <p className="text-xs sm:text-sm text-muted-foreground">Fresh Stock (0-3 days)</p>
-              <p className="text-base sm:text-xl font-semibold text-success">20,700 units</p>
+              <p className="text-base sm:text-xl font-semibold text-success">
+                {(inventoryAgeData.find((item) => item.bucket === "Fresh Stock (0-3 days)")?.units || 0).toLocaleString()}{" "}
+                {t("pages.dc.units")}
+              </p>
             </div>
             <div>
               <p className="text-xs sm:text-sm text-muted-foreground">At Risk (4-5 days)</p>
-              <p className="text-base sm:text-xl font-semibold text-warning">4,500 units</p>
+              <p className="text-base sm:text-xl font-semibold text-warning">
+                {(inventoryAgeData.find((item) => item.bucket === "At Risk (4-5 days)")?.units || 0).toLocaleString()}{" "}
+                {t("pages.dc.units")}
+              </p>
             </div>
             <div>
               <p className="text-xs sm:text-sm text-muted-foreground">Near Expiry (6+ days)</p>
-              <p className="text-base sm:text-xl font-semibold text-destructive">2,250 units</p>
+              <p className="text-base sm:text-xl font-semibold text-destructive">
+                {(inventoryAgeData.find((item) => item.bucket === "Near Expiry (6+ days)")?.units || 0).toLocaleString()}{" "}
+                {t("pages.dc.units")}
+              </p>
             </div>
           </div>
         </div>
