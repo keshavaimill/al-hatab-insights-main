@@ -337,6 +337,19 @@ def factory_kpis():
     return jsonify(result)
 
 
+@app.route("/factory-hourly-production", methods=["GET"])
+def factory_hourly_production():
+    """
+    Get hourly production data (actual and demand) for a factory/line.
+    
+    All business logic is in the data layer - this endpoint is purely presentational.
+    """
+    factory_id = request.args.get("factory_id")
+    line_id = request.args.get("line_id")
+    results = FactoryKPIService.get_factory_hourly_production(factory_id=factory_id, line_id=line_id)
+    return jsonify(results)
+
+
 # ---------------------------------------------
 # Node Health Summary endpoint
 # Now uses the global intermediate dataframe layer

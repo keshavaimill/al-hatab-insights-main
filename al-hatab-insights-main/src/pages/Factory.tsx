@@ -1,6 +1,6 @@
 import { Layout } from "@/components/layout/Layout";
 import { KPICard } from "@/components/dashboard/KPICard";
-import { factoryKPIs as fallbackFactoryKpis, productionData, dispatchPlan } from "@/lib/mockData";
+import { factoryKPIs as fallbackFactoryKpis, productionData as fallbackProductionData, dispatchPlan } from "@/lib/mockData";
 import { chartColors } from "@/lib/colors";
 import { useTranslation } from "react-i18next";
 import { Factory as FactoryIcon, Gauge, Target, AlertTriangle, DollarSign } from "lucide-react";
@@ -16,6 +16,7 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { useEffect, useState } from "react";
 import { fetchFactoryKpis, type FactoryKpisResponse } from "@/api/factoryKpis";
+import { fetchFactoryHourlyProduction, type HourlyProductionData } from "@/api/factoryHourlyProduction";
 
 const Factory = () => {
   const { t } = useTranslation();
@@ -24,6 +25,8 @@ const Factory = () => {
   const [isKpiLoading, setIsKpiLoading] = useState(false);
   const [selectedFactory, setSelectedFactory] = useState<"RIYADH" | "JEDDAH">("RIYADH");
   const [selectedLine, setSelectedLine] = useState<"ALL" | "LINE_1" | "LINE_2" | "LINE_3">("ALL");
+  const [productionData, setProductionData] = useState<HourlyProductionData[]>(fallbackProductionData);
+  const [isProductionLoading, setIsProductionLoading] = useState(false);
 
   const getFactoryIdForSelection = () => {
     // Map UI factories to factory_ids in predictions.csv.
@@ -74,7 +77,30 @@ const Factory = () => {
       }
     };
 
+    const loadHourlyProduction = async () => {
+      setIsProductionLoading(true);
+      try {
+        const data = await fetchFactoryHourlyProduction(
+          getFactoryIdForSelection(),
+          getLineIdForSelection(),
+        );
+        if (!cancelled) {
+          setProductionData(data);
+        }
+      } catch (error) {
+        console.error("Failed to load hourly production from backend, using fallback mock data.", error);
+        if (!cancelled) {
+          setProductionData(fallbackProductionData);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsProductionLoading(false);
+        }
+      }
+    };
+
     loadKpis();
+    loadHourlyProduction();
 
     return () => {
       cancelled = true;
@@ -211,7 +237,6 @@ const Factory = () => {
                     borderRadius: "8px",
                   }}
                 />
-                <Bar dataKey="planned" fill={chartColors.steelBlue} radius={[4, 4, 0, 0]} />
                 <Bar dataKey="actual" fill={chartColors.orange} radius={[4, 4, 0, 0]} />
                 <Bar dataKey="demand" fill={chartColors.mediumGreen} radius={[4, 4, 0, 0]} />
               </BarChart>

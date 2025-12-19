@@ -51,6 +51,94 @@ class FactoryKPIService:
         }
         
         return result
+    
+    @staticmethod
+    def get_factory_hourly_production(factory_id: Optional[str] = None, line_id: Optional[str] = None) -> List[Dict]:
+        """
+        Get hourly production data (actual and demand) for a factory/line.
+        
+        Returns:
+            List of dictionaries with:
+            {
+                "hour": str,  # e.g., "00:00", "01:00", etc.
+                "actual": int,  # Actual production quantity
+                "demand": int   # Predicted demand
+            }
+        """
+        # Get raw dataframes for calculation
+        raw_dfs = global_data_layer._raw_dataframes if hasattr(global_data_layer, '_raw_dataframes') else {}
+        
+        if "factory_predictions" not in raw_dfs:
+            return []
+        
+        factory_raw = raw_dfs["factory_predictions"]
+        if factory_raw.empty:
+            return []
+        
+        # Filter by factory_id if specified
+        if factory_id:
+            factory_raw = factory_raw[factory_raw["factory_id"] == factory_id]
+        
+        # Filter by line_id if specified
+        if line_id:
+            factory_raw = factory_raw[factory_raw["line_id"] == line_id]
+        
+        if factory_raw.empty:
+            return []
+        
+        # Ensure hour column exists
+        if "hour" not in factory_raw.columns and "timestamp" in factory_raw.columns:
+            factory_raw["timestamp"] = pd.to_datetime(factory_raw["timestamp"])
+            factory_raw["hour"] = factory_raw["timestamp"].dt.hour
+        
+        if "hour" not in factory_raw.columns:
+            return []
+        
+        # Group by hour and aggregate
+        hourly_data = factory_raw.groupby("hour").agg({
+            "prod_actual_qty": "sum",
+            "y_pred": "sum",  # Predicted demand (y_pred is the ML model prediction)
+        }).reset_index()
+        
+        # If y_pred is not available, use dc_demand_24h as fallback
+        if "y_pred" not in factory_raw.columns or hourly_data["y_pred"].sum() == 0:
+            if "dc_demand_24h" in factory_raw.columns:
+                hourly_data = factory_raw.groupby("hour").agg({
+                    "prod_actual_qty": "sum",
+                    "dc_demand_24h": "sum",
+                }).reset_index()
+                hourly_data["demand"] = hourly_data["dc_demand_24h"]
+            else:
+                hourly_data["demand"] = 0
+        else:
+            hourly_data["demand"] = hourly_data["y_pred"]
+        
+        results = []
+        for _, row in hourly_data.iterrows():
+            hour = int(row["hour"])
+            hour_str = f"{hour:02d}:00"
+            actual = int(row["prod_actual_qty"]) if pd.notna(row["prod_actual_qty"]) else 0
+            demand = int(row["demand"]) if pd.notna(row["demand"]) else 0
+            
+            results.append({
+                "hour": hour_str,
+                "actual": actual,
+                "demand": demand,
+            })
+        
+        # Sort by hour
+        results.sort(key=lambda x: int(x["hour"].split(":")[0]))
+        
+        # Ensure all 24 hours are present (fill missing hours with 0)
+        all_hours = [f"{h:02d}:00" for h in range(24)]
+        existing_hours = {r["hour"] for r in results}
+        for hour in all_hours:
+            if hour not in existing_hours:
+                results.append({"hour": hour, "actual": 0, "demand": 0})
+        
+        results.sort(key=lambda x: int(x["hour"].split(":")[0]))
+        
+        return results
 
 
 class DCKPIService:
