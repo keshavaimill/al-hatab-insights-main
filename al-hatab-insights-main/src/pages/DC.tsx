@@ -21,6 +21,53 @@ import { fetchDcInventoryAge, type InventoryAgeBucket } from "@/api/dcInventoryA
 const DC = () => {
   const { t } = useTranslation();
   const [selectedDc, setSelectedDc] = useState("DC_JEDDAH");
+
+  const getDCDisplayName = (dcId: string) => {
+    // Try to get translation by node_id first
+    const translationKey = `common.nodeNames.${dcId}`;
+    const translated = t(translationKey, { defaultValue: dcId });
+    // If translation exists (returned value is different from the key), use it
+    return translated !== translationKey ? translated : dcId;
+  };
+
+  const getStoreDisplayName = (storeName: string) => {
+    // Map store names to translation keys
+    const storeKeyMap: Record<string, string> = {
+      "Makkah Store #1": "pages.dc.makkahStore1",
+      "Madinah Store #2": "pages.dc.madinahStore2",
+      "Khobar Store #3": "pages.dc.khobarStore3",
+      "Tabuk Store #4": "pages.dc.tabukStore4",
+    };
+    
+    const translationKey = storeKeyMap[storeName];
+    if (translationKey) {
+      const translated = t(translationKey, { defaultValue: storeName });
+      return translated !== translationKey ? translated : storeName;
+    }
+    return storeName;
+  };
+
+  const getProductDisplayName = (sku: string) => {
+    // Try to get translation by SKU first (handle both SKU-001 and SKU_001 formats)
+    const normalizedSku = sku.replace(/-/g, "_");
+    const translationKey = `common.productNames.${sku}`;
+    const normalizedTranslationKey = `common.productNames.${normalizedSku}`;
+    
+    // Try with original SKU format first
+    let translated = t(translationKey, { defaultValue: sku });
+    if (translated !== translationKey) {
+      return translated;
+    }
+    
+    // Try with normalized SKU format (SKU-001 -> SKU_001)
+    translated = t(normalizedTranslationKey, { defaultValue: sku });
+    if (translated !== normalizedTranslationKey) {
+      return translated;
+    }
+    
+    // Fallback to original SKU if no translation found
+    return sku;
+  };
   const [dcKpis, setDcKpis] = useState<DcKpisResponse | null>(null);
   const [isKpiLoading, setIsKpiLoading] = useState(false);
   const [daysCoverData, setDaysCoverData] = useState<DcDaysCoverRow[]>([]);
@@ -123,8 +170,8 @@ const DC = () => {
             >
               <option value="DC_JEDDAH">{t("pages.dc.jeddahDC")}</option>
               <option value="DC_DAMMAM">{t("pages.dc.dammamDC")}</option>
-              <option value="DC_DUBAI">Dubai DC</option>
-              <option value="DC_RIYADH">Riyadh DC</option>
+              <option value="DC_DUBAI">{t("pages.dc.dubaiDC")}</option>
+              <option value="DC_RIYADH">{t("pages.dc.riyadhDC")}</option>
             </select>
           </div>
         </div>
@@ -199,21 +246,21 @@ const DC = () => {
           {/* Summary */}
           <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-border grid grid-cols-3 gap-2 sm:gap-4 text-center">
             <div>
-              <p className="text-xs sm:text-sm text-muted-foreground">Fresh Stock (0-3 days)</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">{t("pages.dc.freshStock")}</p>
               <p className="text-base sm:text-xl font-semibold text-success">
                 {(inventoryAgeData.find((item) => item.bucket === "Fresh Stock (0-3 days)")?.units || 0).toLocaleString()}{" "}
                 {t("pages.dc.units")}
               </p>
             </div>
             <div>
-              <p className="text-xs sm:text-sm text-muted-foreground">At Risk (4-5 days)</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">{t("pages.dc.atRisk")}</p>
               <p className="text-base sm:text-xl font-semibold text-warning">
                 {(inventoryAgeData.find((item) => item.bucket === "At Risk (4-5 days)")?.units || 0).toLocaleString()}{" "}
                 {t("pages.dc.units")}
               </p>
             </div>
             <div>
-              <p className="text-xs sm:text-sm text-muted-foreground">Near Expiry (6+ days)</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">{t("pages.dc.nearExpiry")}</p>
               <p className="text-base sm:text-xl font-semibold text-destructive">
                 {(inventoryAgeData.find((item) => item.bucket === "Near Expiry (6+ days)")?.units || 0).toLocaleString()}{" "}
                 {t("pages.dc.units")}
@@ -224,33 +271,26 @@ const DC = () => {
 
         {/* DC × SKU Days of Cover Heatmap */}
         <div className="bg-card rounded-xl border border-border p-4 sm:p-6">
-          <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">Days of Cover by DC & SKU</h3>
+          <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">{t("pages.dc.daysOfCoverByDCAndSKU")}</h3>
           <div className="overflow-x-auto -mx-3 sm:mx-0 data-table-wrapper">
             <table className="w-full text-xs sm:text-sm min-w-full">
               <thead>
                 <tr>
-                  <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-muted-foreground font-medium">DC</th>
+                  <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-muted-foreground font-medium">{t("common.nodeType.dc")}</th>
                   <th className="text-center py-2 sm:py-3 px-2 sm:px-4 text-muted-foreground font-medium whitespace-nowrap">
-                    SKU-001<br/><span className="text-[10px] sm:text-xs">(Target: 4d)</span>
+                    {getProductDisplayName("SKU-001")}<br/><span className="text-[10px] sm:text-xs">(Target: 4d)</span>
                   </th>
                   <th className="text-center py-2 sm:py-3 px-2 sm:px-4 text-muted-foreground font-medium whitespace-nowrap">
-                    SKU-002<br/><span className="text-[10px] sm:text-xs">(Target: 4d)</span>
+                    {getProductDisplayName("SKU-002")}<br/><span className="text-[10px] sm:text-xs">(Target: 4d)</span>
                   </th>
                   <th className="text-center py-2 sm:py-3 px-2 sm:px-4 text-muted-foreground font-medium whitespace-nowrap">
-                    SKU-003<br/><span className="text-[10px] sm:text-xs">(Target: 5d)</span>
+                    {getProductDisplayName("SKU-003")}<br/><span className="text-[10px] sm:text-xs">(Target: 5d)</span>
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {["DC_JEDDAH", "DC_DAMMAM", "DC_DUBAI", "DC_RIYADH"].map((dcId) => {
-                  const label =
-                    dcId === "DC_JEDDAH"
-                      ? "Jeddah DC"
-                      : dcId === "DC_DAMMAM"
-                        ? "Dammam DC"
-                        : dcId === "DC_DUBAI"
-                          ? "Dubai DC"
-                          : "Riyadh DC";
+                  const label = getDCDisplayName(dcId);
 
                   const skuTargets: { skuId: string; target: number }[] = [
                     { skuId: "SKU_101", target: 4 },
@@ -314,25 +354,25 @@ const DC = () => {
         {/* Replenishment Recommendations */}
         <div className="bg-card rounded-xl border border-border overflow-hidden">
           <div className="p-3 sm:p-4 border-b border-border">
-            <h3 className="font-semibold text-sm sm:text-base">AI Replenishment Recommendations</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground">Suggested dispatches to stores</p>
+            <h3 className="font-semibold text-sm sm:text-base">{t("pages.dc.aiReplenishmentRecommendations")}</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground">{t("pages.dc.suggestedDispatchesToStores")}</p>
           </div>
           <div className="overflow-x-auto -mx-3 sm:mx-0 data-table-wrapper">
             <table className="data-table min-w-full">
               <thead>
                 <tr>
-                  <th>Store</th>
-                  <th>SKU</th>
-                  <th>Current On-Hand</th>
-                  <th>Recommended Qty</th>
-                  <th>Reason</th>
+                  <th>{t("pages.dc.store")}</th>
+                  <th>{t("pages.factory.sku")}</th>
+                  <th>{t("pages.dc.currentOnHand")}</th>
+                  <th>{t("pages.dc.recommendedQty")}</th>
+                  <th>{t("pages.dc.reason")}</th>
                 </tr>
               </thead>
               <tbody>
                 {replenishmentRecs.map((rec, index) => (
                   <tr key={index}>
-                    <td className="font-medium">{rec.store}</td>
-                    <td className="font-mono text-sm">{rec.sku}</td>
+                    <td className="font-medium">{getStoreDisplayName(rec.store)}</td>
+                    <td className="font-mono text-sm">{getProductDisplayName(rec.sku)}</td>
                     <td>{rec.onHand} units</td>
                     <td>
                       <span className={rec.recommended > rec.onHand ? "text-success" : "text-warning"}>

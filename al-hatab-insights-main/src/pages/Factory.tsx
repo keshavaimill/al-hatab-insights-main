@@ -146,6 +146,28 @@ const Factory = () => {
     }
   };
 
+  const getProductDisplayName = (sku: string, productName: string) => {
+    // Try to get translation by SKU first (handle both SKU-001 and SKU_001 formats)
+    const normalizedSku = sku.replace(/-/g, "_");
+    const translationKey = `common.productNames.${sku}`;
+    const normalizedTranslationKey = `common.productNames.${normalizedSku}`;
+    
+    // Try with original SKU format first
+    let translated = t(translationKey, { defaultValue: productName });
+    if (translated !== translationKey) {
+      return translated;
+    }
+    
+    // Try with normalized SKU format (SKU-001 -> SKU_001)
+    translated = t(normalizedTranslationKey, { defaultValue: productName });
+    if (translated !== normalizedTranslationKey) {
+      return translated;
+    }
+    
+    // Fallback to original product name if no translation found
+    return productName;
+  };
+
   return (
     <Layout>
       <div className="space-y-4 sm:space-y-6 animate-fade-in">
@@ -307,7 +329,7 @@ const Factory = () => {
                   dispatchPlan.map((item) => (
                     <tr key={item.sku}>
                       <td className="font-mono text-sm">{item.sku}</td>
-                      <td className="font-medium">{item.name}</td>
+                      <td className="font-medium">{getProductDisplayName(item.sku, item.name)}</td>
                       <td>{item.forecastDemand.toLocaleString()}</td>
                       <td>{item.recommendedProd.toLocaleString()}</td>
                       <td>{item.capacityImpact}%</td>

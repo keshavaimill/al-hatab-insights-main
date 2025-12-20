@@ -73,6 +73,15 @@ export const NodeHealthTable = memo(function NodeHealthTable({ onNodeClick }: No
     return colors[status as keyof typeof colors] || "bg-muted text-muted-foreground";
   };
 
+  const getNodeDisplayName = (nodeId: string, nodeName: string) => {
+    // Try to get translation by node_id first
+    const translationKey = `common.nodeNames.${nodeId}`;
+    const translated = t(translationKey, { defaultValue: nodeName });
+    // If translation exists (returned value is different from the key), use it
+    // Otherwise, use the defaultValue (original nodeName) or fallback to nodeName
+    return translated !== translationKey ? translated : nodeName;
+  };
+
   const mappedNodes = useMemo(() => nodeHealth, [nodeHealth]);
 
   return (
@@ -112,7 +121,7 @@ export const NodeHealthTable = memo(function NodeHealthTable({ onNodeClick }: No
             ) : (
               mappedNodes.map((node) => (
                 <tr key={node.node_id} onClick={() => onNodeClick?.(parseInt(node.node_id))}>
-                  <td className="font-medium">{node.name}</td>
+                  <td className="font-medium">{getNodeDisplayName(node.node_id, node.name)}</td>
                   <td>
                     <div className="flex items-center gap-2 text-muted-foreground">
                       {getTypeIcon(node.type)}

@@ -21,6 +21,101 @@ import { fetchStoreShelfPerformance, type ShelfPerformanceItem } from "@/api/sto
 const Store = () => {
   const { t } = useTranslation();
   const [selectedStore, setSelectedStore] = useState("ST_DUBAI_HYPER_01");
+
+  const getProductDisplayName = (sku: string, productName: string) => {
+    // Try to get translation by SKU first (handle both SKU-001 and SKU_001 formats)
+    const normalizedSku = sku.replace(/-/g, "_");
+    const translationKey = `common.productNames.${sku}`;
+    const normalizedTranslationKey = `common.productNames.${normalizedSku}`;
+    
+    // Try with original SKU format first
+    let translated = t(translationKey, { defaultValue: productName });
+    if (translated !== translationKey) {
+      return translated;
+    }
+    
+    // Try with normalized SKU format (SKU-001 -> SKU_001)
+    translated = t(normalizedTranslationKey, { defaultValue: productName });
+    if (translated !== normalizedTranslationKey) {
+      return translated;
+    }
+    
+    // Fallback to original product name if no translation found
+    return productName;
+  };
+
+  const translateAction = (actionText: string): string => {
+    // Extract SKU from action text (e.g., "SKU-003", "SKU-005", "SKU-001")
+    const skuMatch = actionText.match(/SKU[-_]\d+/);
+    if (!skuMatch) return actionText;
+    
+    const sku = skuMatch[0];
+    const translatedSku = getProductDisplayName(sku, sku);
+    
+    // Translate common action patterns
+    if (actionText.includes("Increase facing")) {
+      const match = actionText.match(/from (\d+) to (\d+)/);
+      if (match) {
+        return t("pages.store.actionTemplates.increaseFacing", {
+          sku: translatedSku,
+          from: match[1],
+          to: match[2]
+        });
+      }
+    } else if (actionText.includes("Reduce order")) {
+      const match = actionText.match(/by (\d+)%/);
+      if (match) {
+        return t("pages.store.actionTemplates.reduceOrder", {
+          sku: translatedSku,
+          percent: match[1]
+        });
+      }
+    } else if (actionText.includes("Move") && actionText.includes("eye-level")) {
+      return t("pages.store.actionTemplates.moveToEyeLevel", {
+        sku: translatedSku
+      });
+    }
+    
+    // Fallback: replace SKU in original text with translated SKU
+    return actionText.replace(sku, translatedSku);
+  };
+
+  const translateReason = (reasonText: string): string => {
+    // Extract SKU if present
+    const skuMatch = reasonText.match(/SKU[-_]\d+/);
+    const translatedSku = skuMatch ? getProductDisplayName(skuMatch[0], skuMatch[0]) : null;
+    
+    // Translate common reason patterns
+    if (reasonText.includes("High sell-through rate")) {
+      const match = reasonText.match(/\(([\d.]+)\/hr\)/);
+      if (match) {
+        return t("pages.store.reasonTemplates.highSellThrough", {
+          rate: match[1]
+        });
+      }
+    } else if (reasonText.includes("High waste risk")) {
+      const match = reasonText.match(/(\d+) units wasted/);
+      if (match) {
+        return t("pages.store.reasonTemplates.highWasteRisk", {
+          units: match[1]
+        });
+      }
+    } else if (reasonText.includes("Premium product")) {
+      const match = reasonText.match(/([\d.]+) sales\/hr/);
+      if (match) {
+        return t("pages.store.reasonTemplates.premiumProduct", {
+          rate: match[1]
+        });
+      }
+    }
+    
+    // Fallback: replace SKU if present
+    if (translatedSku && skuMatch) {
+      return reasonText.replace(skuMatch[0], translatedSku);
+    }
+    
+    return reasonText;
+  };
   const [storeKpis, setStoreKpis] = useState<StoreKpisResponse | null>(null);
   const [isKpiLoading, setIsKpiLoading] = useState(false);
   const [shelfPerformance, setShelfPerformance] = useState<ShelfPerformanceItem[]>(fallbackShelfPerformance);
@@ -219,7 +314,7 @@ const Store = () => {
 
         {/* Stockout Timeline */}
         <div className="bg-card rounded-xl border border-border p-4 sm:p-6">
-          <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">Stockout Timeline (Today)</h3>
+          <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">{t("pages.store.stockoutTimelineToday")}</h3>
           <div className="relative">
             {/* Hour markers */}
             <div className="flex justify-between mb-2 text-[10px] sm:text-xs text-muted-foreground">
@@ -252,8 +347,8 @@ const Store = () => {
             
             {/* Legend */}
             <div className="mt-2 sm:mt-3 flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-muted-foreground">
-              <span>Total stockout time: <span className="text-primary font-medium">1h 40m</span></span>
-              <span>Affected SKUs: <span className="text-foreground font-medium">3</span></span>
+              <span>{t("pages.store.totalStockoutTime")}: <span className="text-primary font-medium">1h 40m</span></span>
+              <span>{t("pages.store.affectedSKUs")}: <span className="text-foreground font-medium">3</span></span>
             </div>
           </div>
         </div>
@@ -266,30 +361,30 @@ const Store = () => {
           <div className="overflow-x-auto -mx-3 sm:mx-0 data-table-wrapper">
             {isShelfLoading ? (
               <div className="p-8 text-center text-muted-foreground">
-                <p className="text-sm">Loading shelf performance data...</p>
+                <p className="text-sm">{t("pages.store.loadingShelfPerformance")}</p>
               </div>
             ) : shelfPerformance.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground">
-                <p className="text-sm">No shelf performance data available for this store.</p>
+                <p className="text-sm">{t("pages.store.noShelfPerformanceData")}</p>
               </div>
             ) : (
               <table className="data-table min-w-full">
                 <thead>
                   <tr>
                     <th>{t("pages.store.sku")}</th>
-                    <th>Product Name</th>
-                    <th>Planogram Cap</th>
-                    <th>On-Shelf</th>
-                    <th>% Filled</th>
-                    <th>Sales/Hour</th>
-                    <th>Waste (7d)</th>
+                    <th>{t("pages.store.productName")}</th>
+                    <th>{t("pages.store.planogramCap")}</th>
+                    <th>{t("pages.store.onShelf")}</th>
+                    <th>{t("pages.store.percentFilled")}</th>
+                    <th>{t("pages.store.salesPerHour")}</th>
+                    <th>{t("pages.store.waste7d")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {shelfPerformance.map((item) => (
                   <tr key={item.sku}>
                     <td className="font-mono text-sm">{item.sku}</td>
-                    <td className="font-medium">{item.name}</td>
+                    <td className="font-medium">{getProductDisplayName(item.sku, item.name)}</td>
                     <td>{item.planogramCap}</td>
                     <td>{item.onShelf}</td>
                     <td>
@@ -322,19 +417,19 @@ const Store = () => {
               <Lightbulb className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div className="min-w-0">
-              <h3 className="font-semibold text-sm sm:text-base">AI Store Manager Recommendations</h3>
-              <p className="text-xs sm:text-sm text-muted-foreground truncate">Auto-generated action items</p>
+              <h3 className="font-semibold text-sm sm:text-base">{t("pages.store.aiStoreManagerRecommendations")}</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">{t("pages.store.autoGeneratedActionItems")}</p>
             </div>
           </div>
           <div className="divide-y divide-border">
             {storeActions.map((action, index) => (
               <div key={index} className="p-3 sm:p-4 flex items-start gap-2 sm:gap-4 hover:bg-secondary/30 transition-colors">
                 <span className={`px-2 py-1 rounded-full text-[10px] sm:text-xs font-medium shrink-0 ${getPriorityColor(action.priority)}`}>
-                  {action.priority}
+                  {t(`pages.factory.${action.priority.toLowerCase()}` as "pages.factory.low" | "pages.factory.medium" | "pages.factory.high")}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-sm sm:text-base">{action.action}</p>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">{action.reason}</p>
+                  <p className="font-medium text-sm sm:text-base">{translateAction(action.action)}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">{translateReason(action.reason)}</p>
                 </div>
               </div>
             ))}
