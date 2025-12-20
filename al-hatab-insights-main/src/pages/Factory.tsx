@@ -1,6 +1,6 @@
 import { Layout } from "@/components/layout/Layout";
 import { KPICard } from "@/components/dashboard/KPICard";
-import { factoryKPIs as fallbackFactoryKpis, productionData as fallbackProductionData, dispatchPlan } from "@/lib/mockData";
+import { factoryKPIs as fallbackFactoryKpis, productionData as fallbackProductionData, dispatchPlan as fallbackDispatchPlan } from "@/lib/mockData";
 import { chartColors } from "@/lib/colors";
 import { useTranslation } from "react-i18next";
 import { Factory as FactoryIcon, Gauge, Target, AlertTriangle, DollarSign } from "lucide-react";
@@ -17,6 +17,7 @@ import { Slider } from "@/components/ui/slider";
 import { useEffect, useState } from "react";
 import { fetchFactoryKpis, type FactoryKpisResponse } from "@/api/factoryKpis";
 import { fetchFactoryHourlyProduction, type HourlyProductionData } from "@/api/factoryHourlyProduction";
+import { fetchFactoryDispatchPlanning, type DispatchPlanningItem } from "@/api/factoryDispatchPlanning";
 
 const Factory = () => {
   const { t } = useTranslation();
@@ -27,6 +28,8 @@ const Factory = () => {
   const [selectedLine, setSelectedLine] = useState<"ALL" | "LINE_1" | "LINE_2" | "LINE_3">("ALL");
   const [productionData, setProductionData] = useState<HourlyProductionData[]>(fallbackProductionData);
   const [isProductionLoading, setIsProductionLoading] = useState(false);
+  const [dispatchPlan, setDispatchPlan] = useState<DispatchPlanningItem[]>(fallbackDispatchPlan);
+  const [isDispatchLoading, setIsDispatchLoading] = useState(false);
 
   const getFactoryIdForSelection = () => {
     // Map UI factories to factory_ids in predictions.csv.
@@ -99,8 +102,31 @@ const Factory = () => {
       }
     };
 
+    const loadDispatchPlanning = async () => {
+      setIsDispatchLoading(true);
+      try {
+        const data = await fetchFactoryDispatchPlanning(
+          getFactoryIdForSelection(),
+          getLineIdForSelection(),
+        );
+        if (!cancelled) {
+          setDispatchPlan(data);
+        }
+      } catch (error) {
+        console.error("Failed to load dispatch planning from backend, using fallback mock data.", error);
+        if (!cancelled) {
+          setDispatchPlan(fallbackDispatchPlan);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsDispatchLoading(false);
+        }
+      }
+    };
+
     loadKpis();
     loadHourlyProduction();
+    loadDispatchPlanning();
 
     return () => {
       cancelled = true;
@@ -265,20 +291,34 @@ const Factory = () => {
                 </tr>
               </thead>
               <tbody>
-                {dispatchPlan.map((item) => (
-                  <tr key={item.sku}>
-                    <td className="font-mono text-sm">{item.sku}</td>
-                    <td className="font-medium">{item.name}</td>
-                    <td>{item.forecastDemand.toLocaleString()}</td>
-                    <td>{item.recommendedProd.toLocaleString()}</td>
-                    <td>{item.capacityImpact}%</td>
-                    <td>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getWasteRiskColor(item.wasteRisk)}`}>
-                        {item.wasteRisk}
-                      </span>
+                {isDispatchLoading ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-8 text-muted-foreground">
+                      {t("common.loading")}
                     </td>
                   </tr>
-                ))}
+                ) : dispatchPlan.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-8 text-muted-foreground">
+                      {t("common.noDataAvailable")}
+                    </td>
+                  </tr>
+                ) : (
+                  dispatchPlan.map((item) => (
+                    <tr key={item.sku}>
+                      <td className="font-mono text-sm">{item.sku}</td>
+                      <td className="font-medium">{item.name}</td>
+                      <td>{item.forecastDemand.toLocaleString()}</td>
+                      <td>{item.recommendedProd.toLocaleString()}</td>
+                      <td>{item.capacityImpact}%</td>
+                      <td>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getWasteRiskColor(item.wasteRisk)}`}>
+                          {t(`pages.factory.${item.wasteRisk.toLowerCase()}` as "pages.factory.low" | "pages.factory.medium" | "pages.factory.high")}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

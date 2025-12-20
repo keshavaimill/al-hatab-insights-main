@@ -139,6 +139,117 @@ class FactoryKPIService:
         results.sort(key=lambda x: int(x["hour"].split(":")[0]))
         
         return results
+    
+    @staticmethod
+    def get_factory_dispatch_planning(factory_id: Optional[str] = None, line_id: Optional[str] = None) -> List[Dict]:
+        """
+        Get dispatch planning data (SKU-level production recommendations).
+        
+        Returns:
+            List of dictionaries with:
+            {
+                "sku": str,  # SKU identifier
+                "name": str,  # Product name
+                "forecastDemand": int,  # Forecasted DC demand
+                "recommendedProd": int,  # Recommended production quantity
+                "capacityImpact": float,  # Capacity impact percentage
+                "wasteRisk": str  # Waste risk level: "Low", "Medium", "High"
+            }
+        """
+        # Get raw dataframes for calculation
+        raw_dfs = global_data_layer._raw_dataframes if hasattr(global_data_layer, '_raw_dataframes') else {}
+        
+        if "factory_predictions" not in raw_dfs:
+            return []
+        
+        factory_raw = raw_dfs["factory_predictions"]
+        if factory_raw.empty:
+            return []
+        
+        # Filter by factory_id if specified
+        if factory_id:
+            factory_raw = factory_raw[factory_raw["factory_id"] == factory_id]
+        
+        # Filter by line_id if specified
+        if line_id:
+            factory_raw = factory_raw[factory_raw["line_id"] == line_id]
+        
+        if factory_raw.empty:
+            return []
+        
+        # Get DC forecasts for demand data
+        dc_demand_data = {}
+        if "dc_forecasts" in raw_dfs:
+            dc_raw = raw_dfs["dc_forecasts"]
+            if not dc_raw.empty and "sku_id" in dc_raw.columns:
+                # Aggregate DC demand by SKU (sum across all DCs)
+                if "dc_demand_24h" in dc_raw.columns:
+                    dc_demand_by_sku = dc_raw.groupby("sku_id")["dc_demand_24h"].sum().to_dict()
+                    dc_demand_data = dc_demand_by_sku
+                elif "predicted_demand" in dc_raw.columns:
+                    dc_demand_by_sku = dc_raw.groupby("sku_id")["predicted_demand"].sum().to_dict()
+                    dc_demand_data = dc_demand_by_sku
+        
+        # Group by SKU and calculate metrics
+        sku_metrics = factory_raw.groupby("sku_id").agg({
+            "prod_plan_qty": "sum",  # Planned production
+            "prod_actual_qty": "sum",  # Actual production
+            "scrap_qty": "sum",  # Waste/scrap
+            "batch_size_units": "sum",  # Total capacity
+        }).reset_index()
+        
+        results = []
+        for _, row in sku_metrics.iterrows():
+            sku_id = str(row["sku_id"])
+            
+            # Get forecasted DC demand (from DC forecasts or use planned production as proxy)
+            forecast_demand = int(dc_demand_data.get(sku_id, row["prod_plan_qty"])) if dc_demand_data else int(row["prod_plan_qty"])
+            
+            # Recommended production = forecasted demand + 5% buffer (minimum)
+            recommended_prod = int(forecast_demand * 1.05)
+            
+            # Capacity impact = (recommended production / total capacity) * 100
+            total_capacity = float(row["batch_size_units"]) if pd.notna(row["batch_size_units"]) else 1.0
+            if total_capacity > 0:
+                capacity_impact = round((recommended_prod / total_capacity) * 100, 1)
+            else:
+                capacity_impact = 0.0
+            
+            # Waste risk calculation based on historical waste rate
+            total_production = float(row["prod_actual_qty"]) if pd.notna(row["prod_actual_qty"]) else 0.0
+            total_waste = float(row["scrap_qty"]) if pd.notna(row["scrap_qty"]) else 0.0
+            
+            if total_production > 0:
+                waste_rate = (total_waste / total_production) * 100
+            else:
+                waste_rate = 0.0
+            
+            # Determine waste risk level
+            if waste_rate <= 2.0:
+                waste_risk = "Low"
+            elif waste_rate <= 5.0:
+                waste_risk = "Medium"
+            else:
+                waste_risk = "High"
+            
+            # Derive product name from SKU ID
+            product_name = f"Product {sku_id.replace('_', ' ')}"
+            # Format SKU for display (SKU_101 -> SKU-001)
+            sku_display = sku_id.replace("_", "-").upper()
+            
+            results.append({
+                "sku": sku_display,
+                "name": product_name,
+                "forecastDemand": int(forecast_demand),
+                "recommendedProd": int(recommended_prod),
+                "capacityImpact": float(round(capacity_impact, 1)),
+                "wasteRisk": waste_risk,
+            })
+        
+        # Sort by SKU
+        results.sort(key=lambda x: x["sku"])
+        
+        return results
 
 
 class DCKPIService:

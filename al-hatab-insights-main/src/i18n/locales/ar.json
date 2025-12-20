@@ -15,7 +15,14 @@
     "last7days": "آخر 7 أيام",
     "last30days": "آخر 30 يوم",
     "last90days": "آخر 90 يوم",
-    "recommended": "موصى به"
+    "recommended": "موصى به",
+    "loading": "جاري تحميل بيانات صحة العقدة...",
+    "noDataAvailable": "لا توجد بيانات صحة عقدة متاحة",
+    "nodeType": {
+      "factory": "المصنع",
+      "dc": "مركز التوزيع",
+      "store": "المتجر"
+    }
   },
   "topBar": {
     "title": "الحطب",

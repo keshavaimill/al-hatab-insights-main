@@ -99,14 +99,14 @@ export const NodeHealthTable = memo(function NodeHealthTable({ onNodeClick }: No
                 <td colSpan={7} className="text-center py-8">
                   <div className="flex items-center justify-center gap-2 text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Loading node health data...</span>
+                    <span>{t("common.loading")}</span>
                   </div>
                 </td>
               </tr>
             ) : mappedNodes.length === 0 ? (
               <tr>
                 <td colSpan={7} className="text-center py-8 text-muted-foreground">
-                  No node health data available
+                  {t("common.noDataAvailable")}
                 </td>
               </tr>
             ) : (
@@ -116,7 +116,7 @@ export const NodeHealthTable = memo(function NodeHealthTable({ onNodeClick }: No
                   <td>
                     <div className="flex items-center gap-2 text-muted-foreground">
                       {getTypeIcon(node.type)}
-                      <span>{node.type}</span>
+                      <span>{t(`common.nodeType.${node.type.toLowerCase()}`)}</span>
                     </div>
                   </td>
                   <td>

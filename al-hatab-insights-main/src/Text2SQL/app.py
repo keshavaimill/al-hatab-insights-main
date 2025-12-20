@@ -349,6 +349,18 @@ def factory_hourly_production():
     results = FactoryKPIService.get_factory_hourly_production(factory_id=factory_id, line_id=line_id)
     return jsonify(results)
 
+@app.route("/factory-dispatch-planning", methods=["GET"])
+def factory_dispatch_planning():
+    """
+    Get dispatch planning data (SKU-level production recommendations) for a factory/line.
+    
+    All business logic is in the data layer - this endpoint is purely presentational.
+    """
+    factory_id = request.args.get("factory_id")
+    line_id = request.args.get("line_id")
+    results = FactoryKPIService.get_factory_dispatch_planning(factory_id=factory_id, line_id=line_id)
+    return jsonify(results)
+
 
 # ---------------------------------------------
 # Node Health Summary endpoint
