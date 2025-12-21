@@ -25,6 +25,8 @@ from agents.summarizer_agent import SummarizerAgent
 # Utility for chart intent detection
 from utils.intent import wants_chart
 
+from utils.persist import persist_order_log
+
 
 app = Flask(__name__)
 # Enable CORS for frontend requests - allow all origins
@@ -72,6 +74,10 @@ schema = [
     {
         "table_name": "factory_predictions",
         "path": os.path.join(BASE_DIR, "datasets", "predictions.csv"),
+    },
+    {
+        "table_name": "order_log",
+        "path": os.path.join(BASE_DIR, "datasets", "order_log.csv"),
     },
 ]
 
@@ -191,7 +197,7 @@ def query():
 
         # Step 2 — Execute SQL
         try:
-            df = execute_sql(db_path, sql)
+            result = execute_sql(db_path, sql)
         except Exception as e:
             print(f"Error executing SQL: {str(e)}")
             return jsonify({
@@ -204,26 +210,44 @@ def query():
                 "mime": None
             }), 500
 
-        # Step 3 — Summarize result
-        try:
-            summary = summarizer.summarize(question, df)
-        except Exception as e:
-            print(f"Error summarizing results: {str(e)}")
-            # Use a fallback summary if summarization fails
-            summary = f"Query returned {len(df)} row(s)."
+        # WRITE query (INSERT / UPDATE / DELETE)
+        if isinstance(result, int):
+            summary = f"{result} row(s) successfully written to order_log."
+            data = []
 
-        # Step 4 — Generate visualization ONLY if explicitly asked
-        viz, mime = None, None
-        try:
-            if wants_chart(question) and not df.empty:
-                viz, mime = summarizer.generate_viz(question, df)
-        except Exception as e:
-            print(f"Error generating visualization: {str(e)}")
-            # Continue without visualization if it fails
+            # Optional: persist after write
+            try:
+                persist_order_log(db_path)
+            except Exception as e:
+                print(f"Warning: Failed to persist order_log: {str(e)}")
+
+            viz, mime = None, None
+
+        # READ query (SELECT)
+        else:
+            df = result
+            # Step 3 — Summarize result
+            try:
+                summary = summarizer.summarize(question, df)
+            except Exception as e:
+                print(f"Error summarizing results: {str(e)}")
+                # Use a fallback summary if summarization fails
+                summary = f"Query returned {len(df)} row(s)."
+
+            data = df.to_dict(orient="records")
+
+            # Step 4 — Generate visualization ONLY if explicitly asked
+            viz, mime = None, None
+            try:
+                if wants_chart(question) and not df.empty:
+                    viz, mime = summarizer.generate_viz(question, df)
+            except Exception as e:
+                print(f"Error generating visualization: {str(e)}")
+                # Continue without visualization if it fails
 
         return jsonify({
             "sql": sql,
-            "data": df.to_dict(orient="records"),
+            "data": data,
             "summary": summary,
             "viz": viz,
             "mime": mime

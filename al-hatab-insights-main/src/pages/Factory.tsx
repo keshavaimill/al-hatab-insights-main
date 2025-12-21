@@ -247,10 +247,6 @@ const Factory = () => {
             <h3 className="font-semibold text-sm sm:text-base">{t("pages.factory.hourlyProduction")}</h3>
             <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: chartColors.steelBlue }} />
-                <span className="text-muted-foreground">{t("pages.factory.planned")}</span>
-              </div>
-              <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: chartColors.orange }} />
                 <span className="text-muted-foreground">{t("pages.factory.actual")}</span>
               </div>
@@ -261,22 +257,33 @@ const Factory = () => {
             </div>
           </div>
 
-          <div className="h-[250px] sm:h-[300px]">
+          <div className="h-[300px] sm:h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={productionData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+              <BarChart 
+                data={productionData.map(item => ({
+                  ...item,
+                  // Compute stacked segment: forecast demand above actual (if demand > actual)
+                  // Ensure minimum visibility for demand when values are close
+                  forecastStack: Math.max(0, item.demand - item.actual)
+                }))}
+                layout="vertical"
+                barCategoryGap="8%"
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
                 <XAxis
+                  type="number"
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 9 }}
+                  tickLine={false}
+                  axisLine={{ stroke: "hsl(var(--border))" }}
+                  tickFormatter={(value) => `${(value / 1000).toFixed(1)}K`}
+                />
+                <YAxis
+                  type="category"
                   dataKey="hour"
                   tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 9 }}
                   tickLine={false}
                   axisLine={{ stroke: "hsl(var(--border))" }}
-                  interval="preserveStartEnd"
-                />
-                <YAxis
-                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 9 }}
-                  tickLine={false}
-                  axisLine={{ stroke: "hsl(var(--border))" }}
-                  width={35}
+                  width={55}
                 />
                 <Tooltip
                   contentStyle={{
@@ -284,9 +291,39 @@ const Factory = () => {
                     border: "1px solid hsl(var(--border))",
                     borderRadius: "8px",
                   }}
+                  formatter={(value: number, name: string, props: any) => {
+                    // Custom formatter to show actual and demand values in tooltip
+                    if (name === "actual") {
+                      return [value.toLocaleString(), t("pages.factory.actual")];
+                    }
+                    if (name === "forecastStack") {
+                      // Show total demand in tooltip for forecastStack segment
+                      // The payload contains the original data item with demand field
+                      const payload = props?.payload;
+                      const totalDemand = payload?.demand ?? value;
+                      return [totalDemand.toLocaleString(), t("pages.factory.demand")];
+                    }
+                    return [value.toLocaleString(), name];
+                  }}
                 />
-                <Bar dataKey="actual" fill={chartColors.orange} radius={[4, 4, 0, 0]} />
-                <Bar dataKey="demand" fill={chartColors.mediumGreen} radius={[4, 4, 0, 0]} />
+                <Bar 
+                  dataKey="actual" 
+                  fill={chartColors.orange}
+                  fillOpacity={0.75}
+                  radius={[0, 0, 0, 0]} 
+                  stackId="production"
+                  name={t("pages.factory.actual")}
+                />
+                <Bar 
+                  dataKey="forecastStack" 
+                  fill={chartColors.mediumGreen}
+                  fillOpacity={1}
+                  stroke={chartColors.mediumGreen}
+                  strokeWidth={1}
+                  radius={[0, 4, 4, 0]} 
+                  stackId="production"
+                  name={t("pages.factory.demand")}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>

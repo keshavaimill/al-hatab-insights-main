@@ -1,3 +1,4 @@
+from utils.persist import persist_order_log
 import sqlite3
 import pandas as pd
 
@@ -11,6 +12,9 @@ def load_schema(schema_list):
         schema[item["table_name"]] = list(df.columns)
     return schema
 
+
+# SEED_TABLES = {"dc_168h_forecasts", "store_168h_forecasts"}
+# TRANSACTIONAL_TABLES = {"order_log"}
 
 def build_database(schema_list, db_path="local.db"):
     conn = sqlite3.connect(db_path)
@@ -33,11 +37,17 @@ def build_database(schema_list, db_path="local.db"):
             """)
             continue
 
+
         # For Seed Tables
         df = pd.read_csv(item["path"])
+        # if table in SEED_TABLES:
         df.to_sql(table, conn, if_exists="replace", index=False)
 
+        # elif table in TRANSACTIONAL_TABLES:
+        #     df.head(0).to_sql(table, conn, if_exists="append", index=False)
+
     conn.close()
+
 
 
 def execute_sql(db_path, sql):
@@ -63,3 +73,4 @@ def execute_sql(db_path, sql):
     except Exception as e:
         conn.close()
         raise RuntimeError(f"SQL execution failed: {e}")
+
