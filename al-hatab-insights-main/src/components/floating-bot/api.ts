@@ -2,7 +2,7 @@
 // Uses explicit backend URL, overridable via VITE_TEXT2SQL_API_URL
 // Defaults to deployed backend - set VITE_TEXT2SQL_API_URL=http://localhost:5000 for local development
 export const API_BASE_URL =
-  import.meta.env.VITE_TEXT2SQL_API_URL || "https://al-hatab-insights-main-1.onrender.com";
+  import.meta.env.VITE_TEXT2SQL_API_URL || "https://text2sql-v2.onrender.com";
 
 export interface QueryResponse {
   sql: string;
