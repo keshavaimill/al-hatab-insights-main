@@ -9,7 +9,8 @@ This backend is configured to work with Render's deployment requirements:
    - Automatically binds to `0.0.0.0` to accept external connections
 
 2. **Procfile**: Located at `src/Text2SQL/Procfile`
-   - Command: `web: python app.py`
+   - Command: `web: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120`
+   - Uses gunicorn (production WSGI server) instead of Flask's dev server
 
 ## Render Service Settings
 
@@ -22,10 +23,9 @@ When setting up the service on Render:
    pip install -r requirements.txt
    ```
 
-3. **Start Command**: Render will automatically use the Procfile, but you can also set:
-   ```bash
-   python app.py
-   ```
+3. **Start Command**: Render will automatically use the Procfile (no need to set manually)
+
+**Note**: We use `gunicorn` instead of `python app.py` for production. The Procfile handles this automatically.
 
 4. **Environment Variables**: Make sure to set these in Render's dashboard:
    - `LLM_PROVIDER` (e.g., `google` or `openai`)
