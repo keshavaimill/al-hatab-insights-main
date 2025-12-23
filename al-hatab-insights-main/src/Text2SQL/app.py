@@ -198,8 +198,17 @@ def query():
         # Step 2 — Execute SQL
         try:
             result = execute_sql(db_path, sql)
+            # Log query result info for debugging
+            if hasattr(result, 'empty'):
+                print(f"Query returned {len(result)} rows. Empty: {result.empty}")
+                if not result.empty:
+                    print(f"Columns: {result.columns.tolist()}")
+                    print(f"Sample data:\n{result.head(3).to_string()}")
+            else:
+                print(f"Query result type: {type(result)}, value: {result}")
         except Exception as e:
             print(f"Error executing SQL: {str(e)}")
+            print(f"Generated SQL: {sql}")
             return jsonify({
                 "error": "Failed to execute SQL query",
                 "details": str(e),
@@ -227,14 +236,19 @@ def query():
         else:
             df = result
             # Step 3 — Summarize result
-            try:
-                summary = summarizer.summarize(question, df)
-            except Exception as e:
-                print(f"Error summarizing results: {str(e)}")
-                # Use a fallback summary if summarization fails
-                summary = f"Query returned {len(df)} row(s)."
+            # Only summarize if we have data
+            if df.empty:
+                summary = f"No data found for your query: '{question}'. Please try rephrasing your question or check if the data exists in the database."
+                data = []
+            else:
+                try:
+                    summary = summarizer.summarize(question, df)
+                except Exception as e:
+                    print(f"Error summarizing results: {str(e)}")
+                    # Use a fallback summary if summarization fails
+                    summary = f"Query returned {len(df)} row(s). Columns: {', '.join(df.columns.tolist()[:5])}"
 
-            data = df.to_dict(orient="records")
+                data = df.to_dict(orient="records")
 
             # Step 4 — Generate visualization ONLY if explicitly asked
             viz, mime = None, None
@@ -433,4 +447,6 @@ def health():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    # Use PORT environment variable for Render deployment, fallback to 5000 for local development
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=False, host="0.0.0.0", port=port)
